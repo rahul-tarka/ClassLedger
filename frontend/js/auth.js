@@ -169,33 +169,57 @@ async function apiRequest(endpoint, options = {}) {
       }
     }
     
-    // Don't use credentials: 'include' - causes CORS error with Apps Script
-    // Apps Script Web Apps return wildcard CORS headers which don't work with credentials
-    // Instead, we pass userEmail as URL parameter for authentication
-    const response = await fetch(requestUrl, {
-      ...options,
-      mode: 'cors'
-      // No credentials - using userEmail parameter instead
-    });
+    // CRITICAL: Apps Script Web Apps return 302 redirects for OAuth which causes CORS errors
+    // The backend MUST be updated to accept userEmail parameter before requiring OAuth
+    // For now, we'll try the request and handle errors gracefully
     
-    console.log('API Response status:', response.status, response.statusText);
-    
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Non-JSON response:', text);
-      // If we get HTML, it might be an OAuth redirect - redirect to login
-      if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
-        console.log('Received HTML response, likely OAuth redirect needed');
-        window.location.href = 'login.html';
-        return;
-      }
-      throw new Error(`Expected JSON but got: ${contentType}`);
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        ...options,
+        mode: 'cors',
+        redirect: 'follow', // Follow redirects automatically
+        cache: 'no-cache'
+      });
+      
+      console.log('API Response status:', response.status, response.statusText);
+      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
+      
+    } catch (fetchError) {
+      console.error('Fetch error (likely CORS/302 redirect):', fetchError);
+      console.error('This usually means:');
+      console.error('1. Apps Script backend not updated with userEmail support');
+      console.error('2. Web App deployment requires OAuth (causes 302 redirect)');
+      console.error('3. CORS headers not properly set');
+      
+      throw new Error('Network error: Please ensure Apps Script backend is updated. Error: ' + fetchError.message);
     }
     
-    const data = await response.json();
-    console.log('API Response data:', data);
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type') || '';
+    let data;
+    
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+      console.log('API Response data:', data);
+    } else {
+      // Not JSON, might be HTML (OAuth redirect page)
+      const text = await response.text();
+      console.error('Non-JSON response. Content-Type:', contentType);
+      console.error('Response preview:', text.substring(0, 500));
+      
+      // If we get HTML, it's likely an OAuth redirect
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html>') || response.status === 302) {
+        console.error('CRITICAL: Received HTML/Redirect response. This means:');
+        console.error('1. Apps Script backend code needs to be updated');
+        console.error('2. Backend must check userEmail parameter BEFORE requiring OAuth');
+        console.error('3. Please update Code.gs in Apps Script and redeploy');
+        
+        throw new Error('OAuth redirect detected. Please update Apps Script backend to support userEmail parameter.');
+      } else {
+        throw new Error(`Expected JSON but got: ${contentType || 'unknown'} (Status: ${response.status})`);
+      }
+    }
     
     // Check for unauthorized - might need to re-authenticate
     if (data.success === false && data.error === 'Unauthorized') {
