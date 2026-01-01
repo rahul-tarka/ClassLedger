@@ -199,9 +199,11 @@ function getUserFromRequest(e) {
   } catch (err) {
     // OAuth not available, try userEmail parameter (for cross-origin requests)
     if (e && e.parameter && e.parameter.userEmail) {
-      const email = e.parameter.userEmail;
+      const email = decodeURIComponent(e.parameter.userEmail);
+      console.log('Using userEmail parameter:', email);
       return validateUser(email);
     }
+    console.log('No userEmail parameter found, e:', e ? 'exists' : 'null');
     return null;
   }
 }

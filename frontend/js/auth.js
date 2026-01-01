@@ -142,22 +142,14 @@ async function apiRequest(endpoint, options = {}) {
       requestUrl = `${url}${separator}userEmail=${encodeURIComponent(user.email)}`;
     }
     
-    // Try with credentials first (for OAuth session cookies)
-    let response;
-    try {
-      response = await fetch(requestUrl, {
-        ...options,
-        credentials: 'include', // Required for OAuth session cookies
-        mode: 'cors'
-      });
-    } catch (corsError) {
-      // If CORS fails, try without credentials
-      console.warn('CORS error with credentials, trying without:', corsError);
-      response = await fetch(requestUrl, {
-        ...options,
-        mode: 'cors'
-      });
-    }
+    // Don't use credentials: 'include' - causes CORS error with Apps Script
+    // Apps Script Web Apps return wildcard CORS headers which don't work with credentials
+    // Instead, we pass userEmail as URL parameter for authentication
+    const response = await fetch(requestUrl, {
+      ...options,
+      mode: 'cors'
+      // No credentials - using userEmail parameter instead
+    });
     
     console.log('API Response status:', response.status, response.statusText);
     
