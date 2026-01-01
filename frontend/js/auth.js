@@ -18,42 +18,16 @@ function initGoogleSignIn() {
 
 /**
  * Check if user is authenticated and authorized
- * This is used for checking existing sessions, not for initial OAuth
+ * NOTE: This function is kept for backward compatibility but is not actively used
+ * The OAuth flow now uses direct redirects via login.html
+ * 
+ * @deprecated Use the OAuth redirect flow in login.html instead
  */
 async function checkAuth() {
-  try {
-    const response = await fetch(`${API_URL}?action=auth`, {
-      credentials: 'include',
-      mode: 'no-cors' // Apps Script Web Apps need this for OAuth
-    });
-    
-    // Try to parse JSON, but if it's HTML (OAuth redirect), handle it
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      // Response is HTML (OAuth redirect page), need to redirect manually
-      throw new Error('OAuth redirect required');
-    }
-    
-    if (data.success && data.user) {
-      // User is authorized
-      const user = data.user;
-      sessionStorage.setItem('user', JSON.stringify(user));
-      sessionStorage.setItem('authenticated', 'true');
-      
-      // Redirect based on role
-      redirectToDashboard(user.role);
-      return true;
-    } else {
-      // User not authorized or not logged in
-      return false;
-    }
-  } catch (error) {
-    console.error('Auth check error:', error);
-    return false;
-  }
+  // This function is deprecated - OAuth now handled via redirect flow
+  // Keeping for backward compatibility only
+  console.warn('checkAuth() is deprecated - use OAuth redirect flow instead');
+  return false;
 }
 
 /**

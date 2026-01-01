@@ -9,6 +9,10 @@
  * - Audit Logging
  * 
  * SECURITY: All endpoints validate user against Teacher_Master whitelist
+ * 
+ * RUNTIME: This script uses V8 runtime (modern JavaScript)
+ * - Enable V8 runtime in Apps Script: Run → Enable V8 runtime
+ * - V8 provides better performance and modern JavaScript features
  */
 
 // ============================================
