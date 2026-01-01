@@ -65,40 +65,77 @@
 
     <script src="js/auth.js"></script>
     <script>
-        // Wait for DOM to be ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if user data is in URL (from OAuth redirect)
+        // Check URL parameters immediately (before DOMContentLoaded)
+        // This handles OAuth redirects that come with user data in URL
+        (function() {
             const urlParams = new URLSearchParams(window.location.search);
             const userParam = urlParams.get('user');
             const errorParam = urlParams.get('error');
             
             if (errorParam === 'unauthorized') {
-                // Show access denied message
-                showAccessDenied();
+                // Wait for DOM, then show access denied
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        showAccessDenied();
+                    });
+                } else {
+                    showAccessDenied();
+                }
                 return;
             } else if (userParam) {
                 try {
                     const user = JSON.parse(decodeURIComponent(userParam));
                     sessionStorage.setItem('user', JSON.stringify(user));
                     sessionStorage.setItem('authenticated', 'true');
-                    // Clean URL
+                    // Clean URL immediately
                     window.history.replaceState({}, document.title, window.location.pathname);
                     // Redirect to appropriate dashboard
-                    redirectToDashboard(user.role);
+                    // Wait for auth.js to load if needed
+                    if (typeof redirectToDashboard === 'function') {
+                        redirectToDashboard(user.role);
+                    } else {
+                        // Wait for auth.js to load
+                        window.addEventListener('load', function() {
+                            if (typeof redirectToDashboard === 'function') {
+                                redirectToDashboard(user.role);
+                            } else {
+                                // Fallback: redirect based on role
+                                const roleMap = {
+                                    'teacher': 'teacher-dashboard.html',
+                                    'admin': 'admin-dashboard.html',
+                                    'principal': 'principal-dashboard.html'
+                                };
+                                const dashboard = roleMap[user.role] || 'index.html';
+                                window.location.href = dashboard;
+                            }
+                        });
+                    }
                     return;
                 } catch (e) {
                     console.error('Error parsing user data:', e);
-                    showAccessDenied();
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', function() {
+                            showAccessDenied();
+                        });
+                    } else {
+                        showAccessDenied();
+                    }
                     return;
                 }
             }
+        })();
 
-            // Check if already logged in
-            if (isAuthenticated()) {
-                const user = getCurrentUser();
-                if (user) {
-                    redirectToDashboard(user.role);
-                    return;
+        // Wait for DOM to be ready for button initialization
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Check if already logged in (skip if we just processed URL params)
+            if (!window.location.search.includes('user=') && !window.location.search.includes('error=')) {
+                if (isAuthenticated()) {
+                    const user = getCurrentUser();
+                    if (user) {
+                        redirectToDashboard(user.role);
+                        return;
+                    }
                 }
             }
 

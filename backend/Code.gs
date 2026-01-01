@@ -741,49 +741,70 @@ function doGet(e) {
           if (user) {
             // User is authenticated - redirect back to frontend with user data
             const userData = encodeURIComponent(JSON.stringify(user));
+            const finalUrl = redirectUrl + '?user=' + userData;
             return ContentService.createTextOutput(`
               <!DOCTYPE html>
               <html>
               <head>
+                <meta charset="UTF-8">
                 <title>Redirecting to ClassLedger...</title>
-                <meta http-equiv="refresh" content="0;url=${redirectUrl}?user=${userData}">
+                <meta http-equiv="refresh" content="0;url=${finalUrl}">
                 <script>
-                  // Store user data in sessionStorage and redirect
-                  try {
-                    const userData = '${userData}';
-                    sessionStorage.setItem('user', decodeURIComponent(userData));
-                    sessionStorage.setItem('authenticated', 'true');
-                    window.location.href = '${redirectUrl}?user=' + userData;
-                  } catch (e) {
-                    console.error('Error:', e);
-                    window.location.href = '${redirectUrl}?user=${userData}';
-                  }
+                  (function() {
+                    // Immediate redirect - don't wait for anything
+                    try {
+                      const userData = '${userData}';
+                      const redirectUrl = '${finalUrl}';
+                      // Try to set sessionStorage (may fail in some browsers, that's OK)
+                      try {
+                        sessionStorage.setItem('user', decodeURIComponent(userData));
+                        sessionStorage.setItem('authenticated', 'true');
+                      } catch (e) {
+                        console.log('sessionStorage not available, using URL parameter only');
+                      }
+                      // Immediate redirect
+                      window.location.replace(redirectUrl);
+                    } catch (e) {
+                      console.error('Redirect error:', e);
+                      // Fallback: use meta refresh
+                      window.location.href = '${finalUrl}';
+                    }
+                  })();
                 </script>
               </head>
               <body>
                 <div style="text-align: center; padding: 3rem; font-family: Arial, sans-serif;">
                   <h2>Redirecting to ClassLedger...</h2>
                   <p>Please wait...</p>
+                  <p style="font-size: 0.875rem; color: #666;">
+                    If you are not redirected automatically, 
+                    <a href="${finalUrl}" style="color: #0066cc;">click here</a>.
+                  </p>
                 </div>
               </body>
               </html>
             `).setMimeType(ContentService.MimeType.HTML);
           } else {
             // User not authorized - redirect back with error
+            const errorUrl = redirectUrl + '?error=unauthorized';
             return ContentService.createTextOutput(`
               <!DOCTYPE html>
               <html>
               <head>
+                <meta charset="UTF-8">
                 <title>Access Denied</title>
-                <meta http-equiv="refresh" content="0;url=${redirectUrl}?error=unauthorized">
+                <meta http-equiv="refresh" content="0;url=${errorUrl}">
                 <script>
-                  window.location.href = '${redirectUrl}?error=unauthorized';
+                  window.location.replace('${errorUrl}');
                 </script>
               </head>
               <body>
                 <div style="text-align: center; padding: 3rem; font-family: Arial, sans-serif;">
                   <h2>Access Denied</h2>
                   <p>Redirecting...</p>
+                  <p style="font-size: 0.875rem; color: #666;">
+                    <a href="${errorUrl}" style="color: #0066cc;">Click here</a> if not redirected.
+                  </p>
                 </div>
               </body>
               </html>
