@@ -4,8 +4,8 @@
  */
 
 // API Configuration
-// TODO: Replace with your Apps Script Web App URL after deployment
-const API_URL = 'YOUR_WEB_APP_URL';
+// ClassLedger Web App URL
+const API_URL = 'https://script.google.com/macros/s/AKfycbwtvbmUP8SDG3pmLZ0uCxoZjZ8Fs61XFHXZI5sh0GmkMnRK_VrrW7DHO-DpG-5o5elR/exec';
 
 /**
  * Initialize Google Sign-In
@@ -18,11 +18,24 @@ function initGoogleSignIn() {
 
 /**
  * Check if user is authenticated and authorized
+ * This is used for checking existing sessions, not for initial OAuth
  */
 async function checkAuth() {
   try {
-    const response = await fetch(`${API_URL}?action=auth`);
-    const data = await response.json();
+    const response = await fetch(`${API_URL}?action=auth`, {
+      credentials: 'include',
+      mode: 'no-cors' // Apps Script Web Apps need this for OAuth
+    });
+    
+    // Try to parse JSON, but if it's HTML (OAuth redirect), handle it
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // Response is HTML (OAuth redirect page), need to redirect manually
+      throw new Error('OAuth redirect required');
+    }
     
     if (data.success && data.user) {
       // User is authorized
@@ -32,13 +45,14 @@ async function checkAuth() {
       
       // Redirect based on role
       redirectToDashboard(user.role);
+      return true;
     } else {
       // User not authorized or not logged in
-      showAccessDenied();
+      return false;
     }
   } catch (error) {
     console.error('Auth check error:', error);
-    showAccessDenied();
+    return false;
   }
 }
 

@@ -735,6 +735,62 @@ function doGet(e) {
     
     switch (action) {
       case 'auth':
+        // If redirect parameter is provided, redirect back to frontend with user data
+        const redirectUrl = e.parameter.redirect;
+        if (redirectUrl) {
+          if (user) {
+            // User is authenticated - redirect back to frontend with user data
+            const userData = encodeURIComponent(JSON.stringify(user));
+            return ContentService.createTextOutput(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Redirecting to ClassLedger...</title>
+                <meta http-equiv="refresh" content="0;url=${redirectUrl}?user=${userData}">
+                <script>
+                  // Store user data in sessionStorage and redirect
+                  try {
+                    const userData = '${userData}';
+                    sessionStorage.setItem('user', decodeURIComponent(userData));
+                    sessionStorage.setItem('authenticated', 'true');
+                    window.location.href = '${redirectUrl}?user=' + userData;
+                  } catch (e) {
+                    console.error('Error:', e);
+                    window.location.href = '${redirectUrl}?user=${userData}';
+                  }
+                </script>
+              </head>
+              <body>
+                <div style="text-align: center; padding: 3rem; font-family: Arial, sans-serif;">
+                  <h2>Redirecting to ClassLedger...</h2>
+                  <p>Please wait...</p>
+                </div>
+              </body>
+              </html>
+            `).setMimeType(ContentService.MimeType.HTML);
+          } else {
+            // User not authorized - redirect back with error
+            return ContentService.createTextOutput(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Access Denied</title>
+                <meta http-equiv="refresh" content="0;url=${redirectUrl}?error=unauthorized">
+                <script>
+                  window.location.href = '${redirectUrl}?error=unauthorized';
+                </script>
+              </head>
+              <body>
+                <div style="text-align: center; padding: 3rem; font-family: Arial, sans-serif;">
+                  <h2>Access Denied</h2>
+                  <p>Redirecting...</p>
+                </div>
+              </body>
+              </html>
+            `).setMimeType(ContentService.MimeType.HTML);
+          }
+        }
+        // Return JSON for API calls (no redirect parameter)
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
           user: user || null

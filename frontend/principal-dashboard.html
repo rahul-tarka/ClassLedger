@@ -121,6 +121,21 @@
     <script src="js/principal.js"></script>
     <script src="js/admin.js"></script>
     <script>
+        // Check if user data is in URL (from OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user');
+        if (userParam) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userParam));
+                sessionStorage.setItem('user', JSON.stringify(user));
+                sessionStorage.setItem('authenticated', 'true');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+            }
+        }
+    </script>
+    <script>
         // Principal dashboard can use admin functions for viewing
         // But editing is disabled
         document.addEventListener('DOMContentLoaded', () => {

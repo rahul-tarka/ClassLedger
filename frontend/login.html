@@ -65,6 +65,30 @@
 
     <script src="js/auth.js"></script>
     <script>
+        // Check if user data is in URL (from OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user');
+        const errorParam = urlParams.get('error');
+        
+        if (errorParam === 'unauthorized') {
+            // Show access denied message
+            showAccessDenied();
+        } else if (userParam) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userParam));
+                sessionStorage.setItem('user', JSON.stringify(user));
+                sessionStorage.setItem('authenticated', 'true');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Redirect to appropriate dashboard
+                redirectToDashboard(user.role);
+                return;
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+                showAccessDenied();
+            }
+        }
+
         // Initialize login
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const statusEl = document.getElementById('loginStatus');
@@ -72,21 +96,37 @@
             statusEl.className = 'alert alert-info';
             statusEl.textContent = 'Redirecting to Google sign-in...';
             
+            // First try to check if already authenticated via API
             try {
-                // Check if already authenticated
-                await checkAuth();
+                const response = await fetch(`${API_URL}?action=auth`);
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    // User is already authenticated
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    sessionStorage.setItem('authenticated', 'true');
+                    redirectToDashboard(data.user.role);
+                    return;
+                }
             } catch (error) {
-                // If not authenticated, the Apps Script will handle OAuth redirect
-                // For now, redirect to the API URL which will trigger OAuth
-                const apiUrl = API_URL || window.location.origin;
-                window.location.href = `${apiUrl}?action=auth`;
+                console.log('Not authenticated, redirecting to OAuth...');
             }
+            
+            // Redirect to Apps Script Web App which will handle OAuth
+            // The Web App will redirect back with user data
+            const frontendBaseUrl = window.location.origin + window.location.pathname.replace('/login.html', '');
+            const redirectUrl = `${frontendBaseUrl}/login.html`;
+            const apiUrl = API_URL;
+            // Redirect to Web App with redirect parameter
+            window.location.href = `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`;
         });
 
         // Check if already logged in
         if (isAuthenticated()) {
             const user = getCurrentUser();
-            redirectToDashboard(user.role);
+            if (user) {
+                redirectToDashboard(user.role);
+            }
         }
     </script>
 </body>

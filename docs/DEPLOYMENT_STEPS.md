@@ -127,7 +127,7 @@ Create the following tabs in your spreadsheet:
 
 1. **Open Apps Script**: [script.google.com](https://script.google.com)
 2. Click **New Project**
-3. **Name the project**: "ClassLedger Backend"
+3. **Name the project**: "c"
 4. **Delete default Code.gs content** (all content)
 
 ### Step 3.2: Copy Backend Code
@@ -272,18 +272,27 @@ Skip this section if you don't need WhatsApp alerts.
    ```
 4. Click **Save**
 
-### Step 5.2: Host Frontend Files
+### Step 5.2: Deploy Frontend to Vercel (Recommended)
 
-You have 2 options:
+**Easiest Method:**
 
-#### Option A: Google Sites / GitHub Pages (Recommended)
-- Host frontend files
-- Access `index.html` from public URL
+1. Go to: https://vercel.com
+2. Sign up (free, use GitHub account)
+3. Click **"Add New"** → **"Project"**
+4. **Import Git Repository**:
+   - Click "Import" next to your GitHub account
+   - Select: `rahulrathodsubmittable/ClassLedger`
+5. **Configure**:
+   - **Root Directory**: Set to `frontend` ⚠️ Important!
+   - **Framework Preset**: Other
+   - **Build Command**: (leave empty)
+   - **Output Directory**: (leave empty)
+6. Click **"Deploy"**
+7. **Get your URL**: `https://your-project.vercel.app`
 
-#### Option B: Local Testing
-- Keep files on local computer
-- Open `index.html` directly in browser
-- **Note**: OAuth will work, but proper hosting is required for production
+**Benefits**: Auto-deploys on every GitHub push!
+
+**Alternative**: Use GitHub Pages, Netlify, or any web hosting service.
 
 ---
 
