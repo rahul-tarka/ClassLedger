@@ -9,11 +9,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwtvbmUP8SDG3pmLZ0uCxoZ
 
 /**
  * Initialize Google Sign-In
+ * NOTE: OAuth is now handled via direct redirect in login.html
+ * This function is kept for backward compatibility
  */
 function initGoogleSignIn() {
-  // Google OAuth is handled via Apps Script's built-in authentication
-  // When user accesses the app, they'll be prompted to sign in
-  checkAuth();
+  // OAuth is handled via direct redirect in login.html
+  // No need to call checkAuth() - redirect flow handles authentication
+  console.log('initGoogleSignIn: OAuth handled via redirect flow in login.html');
 }
 
 /**
