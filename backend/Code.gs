@@ -976,14 +976,28 @@ window.location.replace('${errorUrl}');
  */
 function doPost(e) {
   try {
+    // Log all parameters for debugging
+    console.log('doPost called');
+    console.log('POST parameters:', JSON.stringify(e.parameter));
+    console.log('userEmail parameter:', e.parameter.userEmail);
+    console.log('POST data:', e.postData ? e.postData.contents : 'no postData');
+    
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
+    console.log('POST action:', action);
+    
     const user = getUserFromRequest(e);
+    console.log('getUserFromRequest returned:', user ? 'user found' : 'null');
     
     if (!user) {
+      console.log('No user found in POST, returning Unauthorized');
       return createJsonResponse({
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
+        debug: {
+          hasUserEmailParam: !!e.parameter.userEmail,
+          userEmailValue: e.parameter.userEmail || 'not provided'
+        }
       });
     }
     
