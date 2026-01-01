@@ -734,6 +734,11 @@ function doGet(e) {
   try {
     const action = e.parameter.action;
     
+    // Log all parameters for debugging
+    console.log('doGet called with action:', action);
+    console.log('All parameters:', JSON.stringify(e.parameter));
+    console.log('userEmail parameter:', e.parameter.userEmail);
+    
     // For 'auth' action, try to get user but don't fail if not authenticated yet
     // This allows OAuth to trigger automatically
     let user = null;
@@ -747,10 +752,16 @@ function doGet(e) {
       }
     } else {
       user = getUserFromRequest(e);
+      console.log('getUserFromRequest returned:', user ? 'user found' : 'null');
       if (!user) {
+        console.log('No user found, returning Unauthorized');
         return ContentService.createTextOutput(JSON.stringify({
           success: false,
-          error: 'Unauthorized'
+          error: 'Unauthorized',
+          debug: {
+            hasUserEmailParam: !!e.parameter.userEmail,
+            userEmailValue: e.parameter.userEmail || 'not provided'
+          }
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }

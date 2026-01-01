@@ -130,16 +130,43 @@ function logout() {
 async function apiRequest(endpoint, options = {}) {
   try {
     const url = `${API_URL}${endpoint}`;
-    console.log('API Request:', url, options);
     
     // Get user from sessionStorage to include in request if needed
     const user = getCurrentUser();
+    console.log('Current user from sessionStorage:', user);
     
     // Build URL with user email if available (for Apps Script to identify user)
     let requestUrl = url;
-    if (user && user.email && !url.includes('userEmail=')) {
-      const separator = url.includes('?') ? '&' : '?';
-      requestUrl = `${url}${separator}userEmail=${encodeURIComponent(user.email)}`;
+    if (user) {
+      // Check for email field (might be in different case or location)
+      const userEmail = user.email || user.Email || user.userEmail || user.user_email;
+      console.log('User email found:', userEmail);
+      
+      if (userEmail && !url.includes('userEmail=')) {
+        const separator = url.includes('?') ? '&' : '?';
+        requestUrl = `${url}${separator}userEmail=${encodeURIComponent(userEmail)}`;
+        console.log('Added userEmail to URL:', requestUrl);
+      } else {
+        console.warn('No userEmail found in user object or already in URL');
+        console.warn('User object keys:', Object.keys(user));
+      }
+    } else {
+      console.error('No user found in sessionStorage!');
+      console.error('sessionStorage.getItem("user"):', sessionStorage.getItem('user'));
+    }
+    
+    console.log('Final API Request URL:', requestUrl);
+    
+    // CRITICAL: If no userEmail in URL and we have user, force add it
+    if (!requestUrl.includes('userEmail=') && user) {
+      const userEmail = user.email || user.Email || user.userEmail || user.user_email;
+      if (userEmail) {
+        const separator = requestUrl.includes('?') ? '&' : '?';
+        requestUrl = `${requestUrl}${separator}userEmail=${encodeURIComponent(userEmail)}`;
+        console.log('FORCED userEmail addition:', requestUrl);
+      } else {
+        console.error('CRITICAL: User exists but no email field found!', user);
+      }
     }
     
     // Don't use credentials: 'include' - causes CORS error with Apps Script
