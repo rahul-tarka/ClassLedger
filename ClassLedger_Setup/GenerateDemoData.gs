@@ -67,12 +67,34 @@ function generateDemoData() {
   console.log('=== Starting Demo Data Generation ===');
   
   try {
+    // Check Script Properties first
+    const sheetIds = getSheetIds();
+    console.log('Checking Script Properties...');
+    
+    if (!sheetIds.studentMaster) {
+      throw new Error('❌ SHEET_ID_STUDENT_MASTER not set!\n\nPlease set Script Properties:\n1. Go to Project Settings → Script Properties\n2. Add: SHEET_ID_STUDENT_MASTER = your-sheet-id\n3. Add: SHEET_ID_ATTENDANCE_LOG = your-sheet-id\n4. Add: SHEET_ID_AUDIT_LOG = your-sheet-id');
+    }
+    
+    if (!sheetIds.attendanceLog) {
+      throw new Error('❌ SHEET_ID_ATTENDANCE_LOG not set!\n\nPlease set in Script Properties.');
+    }
+    
+    if (!sheetIds.auditLog) {
+      throw new Error('❌ SHEET_ID_AUDIT_LOG not set!\n\nPlease set in Script Properties.');
+    }
+    
+    console.log('✅ Script Properties found');
+    console.log(`Student Master Sheet ID: ${sheetIds.studentMaster.substring(0, 10)}...`);
+    console.log(`Attendance Log Sheet ID: ${sheetIds.attendanceLog.substring(0, 10)}...`);
+    console.log(`Audit Log Sheet ID: ${sheetIds.auditLog.substring(0, 10)}...`);
+    
     // Get students from Student_Master
+    console.log('Fetching students...');
     const students = getStudentsForDemo();
-    console.log(`Found ${students.length} students`);
+    console.log(`✅ Found ${students.length} students`);
     
     if (students.length === 0) {
-      throw new Error('No students found! Please add students to Student_Master first.');
+      throw new Error(`No students found!\n\nPlease check:\n1. Student_Master sheet has data\n2. schoolId matches: ${DEMO_CONFIG.schoolId}\n3. className matches: ${DEMO_CONFIG.className}`);
     }
     
     // Generate attendance data
