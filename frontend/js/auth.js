@@ -312,7 +312,12 @@ async function apiPost(action, data) {
   formData.append('action', action);
   for (const key in data) {
     if (data[key] !== null && data[key] !== undefined) {
-      formData.append(key, String(data[key]));
+      // If value is an object/array, stringify it
+      if (typeof data[key] === 'object') {
+        formData.append(key, JSON.stringify(data[key]));
+      } else {
+        formData.append(key, String(data[key]));
+      }
     }
   }
   

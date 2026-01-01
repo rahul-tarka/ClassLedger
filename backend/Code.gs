@@ -999,7 +999,7 @@ function doPost(e) {
         // Form-encoded format (application/x-www-form-urlencoded)
         // Apps Script automatically parses form data into e.parameter
         action = e.parameter.action || '';
-        // Get other fields from parameters
+        // Get all fields from parameters (handles all POST actions)
         data = {
           action: action,
           studentId: e.parameter.studentId || '',
@@ -1007,8 +1007,18 @@ function doPost(e) {
           type: e.parameter.type || '',
           remark: e.parameter.remark || '',
           logId: e.parameter.logId || '',
-          enabled: e.parameter.enabled || ''
+          enabled: e.parameter.enabled || '',
+          date: e.parameter.date || '',
+          attendanceData: e.parameter.attendanceData || '' // For batch operations
         };
+        // If attendanceData is a JSON string, parse it
+        if (data.attendanceData && typeof data.attendanceData === 'string') {
+          try {
+            data.attendanceData = JSON.parse(data.attendanceData);
+          } catch (e) {
+            console.error('Failed to parse attendanceData:', e);
+          }
+        }
       }
     } else {
       // No POST data, try to get action from parameters
