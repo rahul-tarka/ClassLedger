@@ -81,6 +81,25 @@ async function initAdminDashboard() {
   
   // Setup report date range
   setupReportRange();
+  
+  // Setup real-time updates
+  if (typeof realTimeUpdates !== 'undefined') {
+    realTimeUpdates.start('admin-dashboard', async () => {
+      if (selectedClass && selectedDate) {
+        await loadClassReport();
+      }
+    }, 30000); // Update every 30 seconds
+  }
+  
+  // Setup keyboard shortcuts
+  if (typeof shortcuts !== 'undefined') {
+    shortcuts.register('Ctrl+r', async () => {
+      if (selectedClass && selectedDate) {
+        await loadClassReport();
+        Toast.success('Report refreshed');
+      }
+    });
+  }
 }
 
 /**

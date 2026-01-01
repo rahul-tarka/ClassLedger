@@ -260,12 +260,16 @@ async function markAttendance(studentId, status) {
   const existing = todayAttendance[studentId];
   if (existing && existing.checkIn) {
     if (!canEdit(existing.time)) {
-      showMessage('Attendance already marked. Edit window expired (15 minutes)', 'error');
+      Toast.error('Attendance already marked. Edit window expired (15 minutes)');
       return;
     }
     
-    // Show edit confirmation
-    if (!confirm('Attendance already exists. Do you want to update it?')) {
+    // Show edit confirmation using new confirm dialog
+    const confirmed = typeof confirmAction !== 'undefined' 
+      ? await confirmAction('Attendance already exists. Do you want to update it?', 'Update Attendance')
+      : confirm('Attendance already exists. Do you want to update it?');
+    
+    if (!confirmed) {
       return;
     }
     
@@ -290,10 +294,15 @@ async function markAttendance(studentId, status) {
     });
     
     if (response.success) {
-      showMessage('Attendance marked successfully', 'success');
+      Toast.success('Attendance marked successfully');
       await loadTodayAttendance();
+      // Auto-save after marking
+      if (autoSave) {
+        const attendanceData = getAttendanceDataForAutoSave();
+        autoSave.save(selectedClass, attendanceData);
+      }
     } else {
-      showMessage(response.error || 'Failed to mark attendance', 'error');
+      Toast.error(response.error || 'Failed to mark attendance');
     }
   } catch (error) {
     console.error('Mark attendance error:', error);
@@ -442,18 +451,28 @@ function hideSelectLoading(selectId) {
 }
 
 function showMessage(message, type = 'info') {
-  const alert = document.createElement('div');
-  alert.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
-  alert.textContent = message;
-  
-  const container = document.querySelector('.container');
-  if (container) {
-    container.insertBefore(alert, container.firstChild);
+  // Use Toast if available, otherwise fallback to alert
+  if (typeof Toast !== 'undefined') {
+    Toast[type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'](message);
+  } else {
+    // Fallback to old alert system
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+    alert.textContent = message;
     
-    setTimeout(() => {
-      alert.remove();
-    }, 5000);
+    const container = document.querySelector('.container');
+    if (container) {
+      container.insertBefore(alert, container.firstChild);
+      setTimeout(() => alert.remove(), 5000);
+    }
   }
+}
+
+/**
+ * Get attendance data for auto-save
+ */
+function getAttendanceDataForAutoSave() {
+  return todayAttendance || {};
 }
 
 // Initialize on page load
