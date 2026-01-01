@@ -317,7 +317,7 @@ async function toggleWhatsAppAlert(studentId, enabled) {
     }
   } catch (error) {
     console.error('Toggle WhatsApp alert error:', error);
-    showMessage('Error updating setting', 'error');
+    showToast('Error updating setting', 'error');
     // Revert checkbox
     const checkbox = document.querySelector(`input[onchange*="${studentId}"]`);
     if (checkbox) checkbox.checked = !enabled;
@@ -516,13 +516,13 @@ async function generateDateRangeReport() {
     
     if (response.success && response.data) {
       renderDateRangeReport(response.data);
-      showMessage('Report generated successfully', 'success');
+      showToast('Report generated successfully', 'success');
     } else {
-      showMessage(response.error || 'Failed to generate report', 'error');
+      showToast(response.error || 'Failed to generate report', 'error');
     }
   } catch (error) {
     console.error('Generate report error:', error);
-    showMessage('Error generating report', 'error');
+    showToast('Error generating report', 'error');
   } finally {
     hideLoading('dateRangeReport');
     if (generateReportBtn) {
