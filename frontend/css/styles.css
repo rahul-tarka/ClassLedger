@@ -213,8 +213,7 @@ header {
 
 .btn-primary:hover {
   background: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  color: white;
 }
 
 .btn-secondary {
@@ -226,6 +225,7 @@ header {
 .btn-secondary:hover {
   background: var(--primary-color);
   color: white;
+  border-color: var(--primary-color);
 }
 
 .btn-success {
@@ -920,7 +920,7 @@ footer {
 
 .table th,
 .table td {
-  padding: 0.75rem;
+  padding: 1rem 1.25rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
@@ -930,6 +930,13 @@ footer {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 1rem 1.25rem;
