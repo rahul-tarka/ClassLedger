@@ -26,29 +26,47 @@ ClassLedger/
 │   ├── principal-dashboard.html # Principal interface
 │   ├── css/
 │   │   └── styles.css          # Main stylesheet
-│   └── js/
-│       ├── auth.js             # Authentication logic
-│       ├── teacher.js         # Teacher dashboard logic
-│       ├── admin.js            # Admin dashboard logic
-│       └── principal.js        # Principal dashboard logic
+│   ├── js/
+│   │   ├── auth.js             # Authentication logic
+│   │   ├── teacher.js          # Teacher dashboard logic
+│   │   ├── admin.js            # Admin dashboard logic
+│   │   ├── principal.js        # Principal dashboard logic
+│   │   ├── utils.js            # Utility functions
+│   │   ├── realtime.js         # Real-time updates
+│   │   ├── analytics.js        # Analytics & insights
+│   │   ├── advanced-reporting.js # Charts & exports
+│   │   ├── bulk-operations.js  # Bulk operations
+│   │   └── holiday-calendar.js # Holiday management
+│   └── README.md               # Frontend documentation
+├── ClassLedger_Setup/
+│   ├── Setup.gs                # Automated Google Sheets setup
+│   └── GenerateDemoData.gs     # Demo data generator
 ├── docs/
+│   ├── DEPLOYMENT_STEPS.md     # Complete deployment guide
 │   ├── SHEETS_SETUP.md         # Google Sheets schema guide
-│   ├── DEPLOYMENT.md           # Deployment instructions
-│   ├── DEPLOYMENT_STEPS.md     # Complete step-by-step deployment guide
-│   ├── QUICK_START.md          # Quick start guide
-│   ├── QUICK_REFERENCE.md      # Quick reference card
-│   ├── SAMPLE_DATA.md          # Sample data for testing
-│   └── WHATSAPP_SETUP.md       # WhatsApp setup guide
+│   ├── WHATSAPP_SETUP.md       # WhatsApp alerts setup
+│   ├── DEMO_DATA_GUIDE.md      # Demo data generation guide
+│   ├── DUAL_REPO_STRATEGY.md   # Dual repository strategy
+│   ├── FRONTEND_REPO_SETUP.md  # Frontend repo setup guide
+│   ├── GITHUB_PAGES_DEPLOYMENT.md # GitHub Pages guide
+│   ├── PRIVATE_REPO_HOSTING.md # Private repo hosting options
+│   └── IMPROVEMENTS_AND_FUTURE.md # Future roadmap
+├── sync-frontend.sh            # Frontend sync script
+├── netlify.toml                # Netlify configuration
+├── deploy-surge.sh             # Surge.sh deployment script
 └── README.md                   # This file
 ```
 
 ## 🚀 Quick Start
 
-1. **Setup Google Sheets** - Follow `docs/SHEETS_SETUP.md`
-2. **Deploy Apps Script** - Follow `docs/DEPLOYMENT.md`
+1. **Setup Google Sheets** - Follow `docs/SHEETS_SETUP.md` or use automated setup in `ClassLedger_Setup/`
+2. **Deploy Apps Script** - Follow `docs/DEPLOYMENT_STEPS.md`
 3. **Configure Script Properties** - Set Sheet IDs in Apps Script
 4. **Setup WhatsApp Alerts (Optional)** - Follow `docs/WHATSAPP_SETUP.md`
-5. **Access Application** - Use the Web App URL
+5. **Deploy Frontend** - Choose from:
+   - GitHub Pages (public repo) - See `docs/FRONTEND_REPO_SETUP.md`
+   - Netlify/Cloudflare (private repo) - See `docs/PRIVATE_REPO_HOSTING.md`
+6. **Access Application** - Use the deployed frontend URL
 
 ## 🔐 Security Features
 
@@ -60,13 +78,27 @@ ClassLedger/
 
 ## 📊 Features
 
+### Core Features
 - Multi-school support
 - Real-time attendance tracking
 - Automatic late detection (after 09:15)
-- Daily/weekly/monthly reports
-- Google Drive auto-export
-- Looker Studio ready data views
-- **WhatsApp alerts for absent students** (Hindi messages via Meta Cloud API)
+- Role-based dashboards (Teacher/Admin/Principal)
+- Audit-safe append-only logs
+
+### Version 2.0 Features
+- **Real-time Updates** - Auto-refresh functionality
+- **Advanced Reporting** - Charts, PDF export, custom date ranges
+- **Analytics & Insights** - Trend analysis, anomaly detection, performance metrics
+- **Holiday Calendar** - Manage holidays and exclude from reports
+- **Bulk Operations** - Import students, bulk attendance marking
+- **WhatsApp Alerts** - Absent student notifications (Hindi messages via Meta Cloud API)
+
+### Quick Wins
+- Toast notifications
+- Keyboard shortcuts
+- Loading indicators
+- Export utilities (CSV, JSON, PDF)
+- Cache management
 
 ## 📝 License
 
