@@ -35,10 +35,20 @@ async function initAdminDashboard() {
   if (dateInput) {
     dateInput.value = selectedDate;
     dateInput.max = selectedDate; // Can't select future dates
-    dateInput.addEventListener('change', (e) => {
+    dateInput.addEventListener('change', async (e) => {
       selectedDate = e.target.value;
       if (selectedClass) {
-        loadClassReport();
+        // Show loading indicator
+        showSelectLoading('dateSelect');
+        showLoading('attendanceStats');
+        showLoading('absentStudents');
+        showLoading('teacherAccountability');
+        
+        try {
+          await loadClassReport();
+        } finally {
+          hideSelectLoading('dateSelect');
+        }
       }
     });
   }
@@ -46,10 +56,25 @@ async function initAdminDashboard() {
   // Setup class selector
   const classSelect = document.getElementById('classSelect');
   if (classSelect) {
-    classSelect.addEventListener('change', (e) => {
+    classSelect.addEventListener('change', async (e) => {
       selectedClass = e.target.value;
       if (selectedClass) {
-        loadClassReport();
+        // Show loading indicator
+        showSelectLoading('classSelect');
+        showLoading('attendanceStats');
+        showLoading('absentStudents');
+        showLoading('teacherAccountability');
+        
+        try {
+          await loadClassReport();
+        } finally {
+          hideSelectLoading('classSelect');
+        }
+      } else {
+        // Clear content when no class selected
+        document.getElementById('attendanceStats').innerHTML = '';
+        document.getElementById('absentStudents').innerHTML = '<p class="text-center">Select a class and date to view absent students</p>';
+        document.getElementById('teacherAccountability').innerHTML = '<p class="text-center">Select a class and date to view teacher accountability</p>';
       }
     });
   }

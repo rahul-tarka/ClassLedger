@@ -94,8 +94,21 @@ function loadClasses() {
     classSelect.addEventListener('change', async (e) => {
       selectedClass = e.target.value;
       if (selectedClass) {
-        await loadStudents();
-        await loadTodayAttendance();
+        // Show loading indicators
+        showSelectLoading('classSelect');
+        showLoading('studentsList', 'Loading students...');
+        showLoading('summaryContainer', 'Loading attendance...');
+        
+        try {
+          await loadStudents();
+          await loadTodayAttendance();
+        } finally {
+          hideSelectLoading('classSelect');
+        }
+      } else {
+        // Clear when no class selected
+        document.getElementById('studentsList').innerHTML = '<p class="text-center">Please select a class</p>';
+        document.getElementById('summaryContainer').style.display = 'none';
       }
     });
   }
@@ -395,15 +408,37 @@ function submitAttendance() {
 /**
  * Utility functions
  */
-function showLoading(elementId) {
+function showLoading(elementId, message = 'Loading...') {
   const el = document.getElementById(elementId);
   if (el) {
-    el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+    el.innerHTML = `<div class="loading"><div class="spinner"></div>${message}</div>`;
   }
 }
 
 function hideLoading(elementId) {
   // Will be replaced by render functions
+}
+
+/**
+ * Show loading indicator on select/dropdown
+ */
+function showSelectLoading(selectId) {
+  const select = document.getElementById(selectId);
+  if (select) {
+    select.classList.add('select-loading');
+    select.disabled = true;
+  }
+}
+
+/**
+ * Hide loading indicator on select/dropdown
+ */
+function hideSelectLoading(selectId) {
+  const select = document.getElementById(selectId);
+  if (select) {
+    select.classList.remove('select-loading');
+    select.disabled = false;
+  }
 }
 
 function showMessage(message, type = 'info') {

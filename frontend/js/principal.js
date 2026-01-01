@@ -170,9 +170,18 @@ async function setupFilters() {
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
     dateInput.max = today;
-    dateInput.addEventListener('change', () => {
+    dateInput.addEventListener('change', async () => {
       if (document.getElementById('classSelect')?.value) {
-        loadClassReport();
+        showSelectLoading('dateSelect');
+        showLoading('reportContent', 'Loading report...');
+        showLoading('absentStudents', 'Loading absent students...');
+        showLoading('teacherAccountability', 'Loading teacher accountability...');
+        
+        try {
+          await loadClassReport();
+        } finally {
+          hideSelectLoading('dateSelect');
+        }
       }
     });
   }
@@ -180,9 +189,22 @@ async function setupFilters() {
   // Setup class selector
   const classSelect = document.getElementById('classSelect');
   if (classSelect) {
-    classSelect.addEventListener('change', () => {
+    classSelect.addEventListener('change', async () => {
       if (classSelect.value) {
-        loadClassReport();
+        showSelectLoading('classSelect');
+        showLoading('reportContent', 'Loading report...');
+        showLoading('absentStudents', 'Loading absent students...');
+        showLoading('teacherAccountability', 'Loading teacher accountability...');
+        
+        try {
+          await loadClassReport();
+        } finally {
+          hideSelectLoading('classSelect');
+        }
+      } else {
+        document.getElementById('reportContent').innerHTML = '<p class="text-center">Select a class and date to view report</p>';
+        document.getElementById('absentStudents').innerHTML = '<p class="text-center">Select a class and date to view absent students</p>';
+        document.getElementById('teacherAccountability').innerHTML = '<p class="text-center">Select a class and date to view teacher accountability</p>';
       }
     });
   }
