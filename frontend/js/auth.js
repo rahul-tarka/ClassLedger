@@ -124,16 +124,20 @@ function logout() {
 
 /**
  * Make authenticated API request
+ * Note: Apps Script Web Apps handle authentication via OAuth redirects and cookies
+ * We don't need credentials: 'include' which causes CORS issues
  */
 async function apiRequest(endpoint, options = {}) {
   try {
     const url = `${API_URL}${endpoint}`;
     console.log('API Request:', url, options);
     
+    // Apps Script Web Apps handle auth via OAuth, not fetch credentials
+    // Removing credentials: 'include' to fix CORS issues
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',
-      mode: 'cors' // Explicitly set CORS mode
+      // Don't use credentials: 'include' - causes CORS error with Apps Script wildcard headers
+      // OAuth session is maintained automatically via cookies
     });
     
     console.log('API Response status:', response.status, response.statusText);
@@ -143,11 +147,25 @@ async function apiRequest(endpoint, options = {}) {
     if (!contentType || !contentType.includes('application/json')) {
       const text = await response.text();
       console.error('Non-JSON response:', text);
+      // If we get HTML, it might be an OAuth redirect - redirect to login
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
+        console.log('Received HTML response, likely OAuth redirect needed');
+        window.location.href = 'login.html';
+        return;
+      }
       throw new Error(`Expected JSON but got: ${contentType}`);
     }
     
     const data = await response.json();
     console.log('API Response data:', data);
+    
+    // Check for unauthorized - might need to re-authenticate
+    if (data.success === false && data.error === 'Unauthorized') {
+      console.log('Unauthorized response, redirecting to login');
+      sessionStorage.clear();
+      window.location.href = 'login.html';
+      return;
+    }
     
     if (!response.ok) {
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
@@ -161,6 +179,12 @@ async function apiRequest(endpoint, options = {}) {
       stack: error.stack,
       endpoint: endpoint
     });
+    
+    // If it's a network error and we're not on login page, might need auth
+    if (error.message.includes('Failed to fetch') && !window.location.pathname.includes('login.html')) {
+      console.log('Network error, might need authentication');
+    }
+    
     throw error;
   }
 }
