@@ -188,13 +188,20 @@ function validateUser(email) {
 }
 
 /**
- * Get user info from request (requires OAuth)
+ * Get user info from request (requires OAuth or userEmail parameter)
+ * For cross-origin requests, userEmail can be passed as parameter
  */
-function getUserFromRequest() {
+function getUserFromRequest(e) {
   try {
+    // First try OAuth (Session.getActiveUser)
     const email = Session.getActiveUser().getEmail();
     return validateUser(email);
-  } catch (e) {
+  } catch (err) {
+    // OAuth not available, try userEmail parameter (for cross-origin requests)
+    if (e && e.parameter && e.parameter.userEmail) {
+      const email = e.parameter.userEmail;
+      return validateUser(email);
+    }
     return null;
   }
 }
@@ -338,9 +345,9 @@ function getTodayAttendance(schoolId, className, date) {
 /**
  * Mark attendance (check-in or check-out)
  */
-function markAttendance(studentId, status, type, remark) {
+function markAttendance(studentId, status, type, remark, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -534,9 +541,9 @@ function editAttendance(logId, newStatus, newRemark) {
 /**
  * Mark attendance for multiple students (batch)
  */
-function markAttendanceBatch(attendanceData) {
+function markAttendanceBatch(attendanceData, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -545,9 +552,9 @@ function markAttendanceBatch(attendanceData) {
     const currentDate = getCurrentDate();
     const currentTime = getCurrentTime();
     
-    for (const item of attendanceData) {
+      for (const item of attendanceData) {
       const { studentId, status, remark } = item;
-      const result = markAttendance(studentId, status, 'CHECK_IN', remark);
+      const result = markAttendance(studentId, status, 'CHECK_IN', remark, e);
       results.push({ studentId, ...result });
     }
     
@@ -730,14 +737,14 @@ function doGet(e) {
     let user = null;
     if (action === 'auth') {
       try {
-        user = getUserFromRequest();
-      } catch (e) {
+        user = getUserFromRequest(e);
+      } catch (err) {
         // User not authenticated yet - OAuth will trigger automatically
         // Don't return error, let the auth flow continue
         user = null;
       }
     } else {
-      user = getUserFromRequest();
+      user = getUserFromRequest(e);
       if (!user) {
         return ContentService.createTextOutput(JSON.stringify({
           success: false,
@@ -757,8 +764,8 @@ function doGet(e) {
           // Try to get user again (in case OAuth just completed)
           if (!user) {
             try {
-              user = getUserFromRequest();
-            } catch (e) {
+              user = getUserFromRequest(e);
+            } catch (err) {
               user = null;
             }
           }
@@ -907,7 +914,7 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     
     if (!user) {
       return ContentService.createTextOutput(JSON.stringify({
@@ -922,12 +929,13 @@ function doPost(e) {
           data.studentId,
           data.status,
           data.type || 'CHECK_IN',
-          data.remark || ''
+          data.remark || '',
+          e
         );
         return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
         
       case 'markAttendanceBatch':
-        const batchResult = markAttendanceBatch(data.attendanceData || []);
+        const batchResult = markAttendanceBatch(data.attendanceData || [], e);
         return ContentService.createTextOutput(JSON.stringify(batchResult)).setMimeType(ContentService.MimeType.JSON);
         
       case 'editAttendance':

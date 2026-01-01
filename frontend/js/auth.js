@@ -125,20 +125,39 @@ function logout() {
 /**
  * Make authenticated API request
  * Note: Apps Script Web Apps handle authentication via OAuth redirects and cookies
- * We don't need credentials: 'include' which causes CORS issues
+ * For cross-origin requests, we need to pass user info or use credentials
  */
 async function apiRequest(endpoint, options = {}) {
   try {
     const url = `${API_URL}${endpoint}`;
     console.log('API Request:', url, options);
     
-    // Apps Script Web Apps handle auth via OAuth, not fetch credentials
-    // Removing credentials: 'include' to fix CORS issues
-    const response = await fetch(url, {
-      ...options,
-      // Don't use credentials: 'include' - causes CORS error with Apps Script wildcard headers
-      // OAuth session is maintained automatically via cookies
-    });
+    // Get user from sessionStorage to include in request if needed
+    const user = getCurrentUser();
+    
+    // Build URL with user email if available (for Apps Script to identify user)
+    let requestUrl = url;
+    if (user && user.email && !url.includes('userEmail=')) {
+      const separator = url.includes('?') ? '&' : '?';
+      requestUrl = `${url}${separator}userEmail=${encodeURIComponent(user.email)}`;
+    }
+    
+    // Try with credentials first (for OAuth session cookies)
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        ...options,
+        credentials: 'include', // Required for OAuth session cookies
+        mode: 'cors'
+      });
+    } catch (corsError) {
+      // If CORS fails, try without credentials
+      console.warn('CORS error with credentials, trying without:', corsError);
+      response = await fetch(requestUrl, {
+        ...options,
+        mode: 'cors'
+      });
+    }
     
     console.log('API Response status:', response.status, response.statusText);
     
@@ -163,8 +182,12 @@ async function apiRequest(endpoint, options = {}) {
     if (data.success === false && data.error === 'Unauthorized') {
       console.log('Unauthorized response, redirecting to login');
       sessionStorage.clear();
-      window.location.href = 'login.html';
-      return;
+      // Return error object instead of undefined to prevent crashes
+      // The redirect will happen, but we also return an error for the caller
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 100);
+      throw new Error('Unauthorized - please login again');
     }
     
     if (!response.ok) {
