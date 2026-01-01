@@ -183,7 +183,14 @@ async function loadClassReport() {
   if (!selectedClass || !selectedDate) return;
   
   try {
-    showLoading('reportContent');
+    // Show loading for all sections
+    const attendanceStatsEl = document.getElementById('attendanceStats');
+    const absentStudentsEl = document.getElementById('absentStudents');
+    const teacherAccountabilityEl = document.getElementById('teacherAccountability');
+    
+    if (attendanceStatsEl) showLoading('attendanceStats', 'Loading attendance statistics...');
+    if (absentStudentsEl) showLoading('absentStudents', 'Loading absent students...');
+    if (teacherAccountabilityEl) showLoading('teacherAccountability', 'Loading teacher accountability...');
     
     // Load students first to get WhatsApp settings
     const studentsResponse = await apiGet('getStudents', {
@@ -221,9 +228,8 @@ async function loadClassReport() {
   } catch (error) {
     console.error('Load report error:', error);
     showMessage('Error loading report', 'error');
-  } finally {
-    hideLoading('reportContent');
   }
+  // Note: hideLoading not needed as render functions replace content
 }
 
 /**
