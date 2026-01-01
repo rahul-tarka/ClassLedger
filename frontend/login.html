@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ClassLedger by Tarka</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <div class="logo">ClassLedger</div>
+                <div class="branding">by Tarka</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="card" style="max-width: 500px; margin: 3rem auto;">
+                <div class="text-center">
+                    <h1 style="margin-bottom: 1rem;">Login to ClassLedger</h1>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Sign in with your Google account to access the attendance system.
+                        Only authorized school staff can access this system.
+                    </p>
+                </div>
+
+                <div id="loginStatus" class="alert alert-info" style="display: none;"></div>
+
+                <div class="text-center">
+                    <button id="loginBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                        Sign in with Google
+                    </button>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        You will be redirected to Google's sign-in page.
+                    </p>
+                    <a href="index.html" style="color: var(--primary-color); text-decoration: none;">
+                        ← Back to Homepage
+                    </a>
+                </div>
+            </div>
+
+            <div class="card" style="max-width: 500px; margin: 0 auto;">
+                <h3 style="margin-bottom: 1rem;">Access Requirements</h3>
+                <ul style="line-height: 2; margin-left: 2rem;">
+                    <li>Your Google email must be registered in the system</li>
+                    <li>Your account must be marked as active</li>
+                    <li>You must have an assigned role (Teacher, Admin, or Principal)</li>
+                </ul>
+                <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.875rem;">
+                    If you believe you should have access, please contact your school administrator.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2024 ClassLedger by Tarka</p>
+            <p>Powered by Tarka</p>
+        </div>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Initialize login
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const statusEl = document.getElementById('loginStatus');
+            statusEl.style.display = 'block';
+            statusEl.className = 'alert alert-info';
+            statusEl.textContent = 'Redirecting to Google sign-in...';
+            
+            try {
+                // Check if already authenticated
+                await checkAuth();
+            } catch (error) {
+                // If not authenticated, the Apps Script will handle OAuth redirect
+                // For now, redirect to the API URL which will trigger OAuth
+                const apiUrl = API_URL || window.location.origin;
+                window.location.href = `${apiUrl}?action=auth`;
+            }
+        });
+
+        // Check if already logged in
+        if (isAuthenticated()) {
+            const user = getCurrentUser();
+            redirectToDashboard(user.role);
+        }
+    </script>
+</body>
+</html>
+

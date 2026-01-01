@@ -1,0 +1,37 @@
+# ClassLedger by Tarka - Git Ignore
+
+# Environment and configuration files
+.env
+config.js
+*.local.js
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build files (if any)
+dist/
+build/
+
+# Node modules (if using any build tools)
+node_modules/
+
+# API URLs and secrets (should be configured per deployment)
+# Note: Keep API_URL placeholder in code, configure in deployment
+
