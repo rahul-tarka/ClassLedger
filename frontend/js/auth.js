@@ -278,13 +278,20 @@ async function apiPost(action, data) {
   // Get user email to add to URL for Apps Script authentication
   const user = getCurrentUser();
   let endpoint = '';
-  if (user && user.email) {
+  if (user) {
     const userEmail = user.email || user.Email || user.userEmail || user.user_email;
     if (userEmail) {
       endpoint = `?userEmail=${encodeURIComponent(userEmail)}`;
       console.log('apiPost: Added userEmail to endpoint:', endpoint);
+    } else {
+      console.error('apiPost: User found but no email field:', user);
     }
+  } else {
+    console.error('apiPost: No user found in sessionStorage!');
   }
+  
+  console.log('apiPost: Making POST request with action:', action);
+  console.log('apiPost: Data:', data);
   
   return apiRequest(endpoint, {
     method: 'POST',

@@ -762,9 +762,11 @@ function exportToDrive(date) {
 
 /**
  * Handle OPTIONS requests (CORS preflight for POST requests)
+ * Apps Script Web Apps should automatically handle CORS, but we provide explicit support
  */
 function doOptions(e) {
-  // Apps Script Web Apps automatically handle CORS, but we return empty response for preflight
+  // Return empty response with proper headers for CORS preflight
+  // Apps Script Web Apps automatically add CORS headers when deployed as Web App
   return ContentService.createTextOutput('')
     .setMimeType(ContentService.MimeType.TEXT);
 }
