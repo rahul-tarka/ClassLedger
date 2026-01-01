@@ -127,6 +127,12 @@
 
         // Wait for DOM to be ready for button initialization
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if we're showing access denied (error parameter in URL)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('error') === 'unauthorized') {
+                // Access denied is already shown, don't try to initialize button
+                return;
+            }
 
             // Check if already logged in (skip if we just processed URL params)
             if (!window.location.search.includes('user=') && !window.location.search.includes('error=')) {
@@ -142,7 +148,10 @@
             // Initialize login button
             const loginBtn = document.getElementById('loginBtn');
             if (!loginBtn) {
-                console.error('Login button not found!');
+                // Button might have been removed by showAccessDenied, check if we should show it
+                if (urlParams.get('error') !== 'unauthorized') {
+                    console.error('Login button not found!');
+                }
                 return;
             }
 
