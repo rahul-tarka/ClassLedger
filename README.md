@@ -34,7 +34,8 @@ ClassLedger/
 ├── docs/
 │   ├── SHEETS_SETUP.md         # Google Sheets schema guide
 │   ├── DEPLOYMENT.md           # Deployment instructions
-│   ├── DEPLOYMENT_STEPS_HINDI.md # Complete deployment guide (हिंदी में)
+│   ├── DEPLOYMENT_STEPS.md     # Complete step-by-step deployment guide
+│   ├── QUICK_REFERENCE.md      # Quick reference card
 │   └── WHATSAPP_SETUP.md       # WhatsApp setup guide
 └── README.md                   # This file
 ```
