@@ -65,69 +65,77 @@
 
     <script src="js/auth.js"></script>
     <script>
-        // Check if user data is in URL (from OAuth redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const userParam = urlParams.get('user');
-        const errorParam = urlParams.get('error');
-        
-        if (errorParam === 'unauthorized') {
-            // Show access denied message
-            showAccessDenied();
-        } else if (userParam) {
-            try {
-                const user = JSON.parse(decodeURIComponent(userParam));
-                sessionStorage.setItem('user', JSON.stringify(user));
-                sessionStorage.setItem('authenticated', 'true');
-                // Clean URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-                // Redirect to appropriate dashboard
-                redirectToDashboard(user.role);
-                return;
-            } catch (e) {
-                console.error('Error parsing user data:', e);
-                showAccessDenied();
-            }
-        }
-
-        // Initialize login
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const statusEl = document.getElementById('loginStatus');
-            statusEl.style.display = 'block';
-            statusEl.className = 'alert alert-info';
-            statusEl.textContent = 'Redirecting to Google sign-in...';
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user data is in URL (from OAuth redirect)
+            const urlParams = new URLSearchParams(window.location.search);
+            const userParam = urlParams.get('user');
+            const errorParam = urlParams.get('error');
             
-            // First try to check if already authenticated via API
-            try {
-                const response = await fetch(`${API_URL}?action=auth`);
-                const data = await response.json();
-                
-                if (data.success && data.user) {
-                    // User is already authenticated
-                    sessionStorage.setItem('user', JSON.stringify(data.user));
+            if (errorParam === 'unauthorized') {
+                // Show access denied message
+                showAccessDenied();
+                return;
+            } else if (userParam) {
+                try {
+                    const user = JSON.parse(decodeURIComponent(userParam));
+                    sessionStorage.setItem('user', JSON.stringify(user));
                     sessionStorage.setItem('authenticated', 'true');
-                    redirectToDashboard(data.user.role);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Redirect to appropriate dashboard
+                    redirectToDashboard(user.role);
+                    return;
+                } catch (e) {
+                    console.error('Error parsing user data:', e);
+                    showAccessDenied();
                     return;
                 }
-            } catch (error) {
-                console.log('Not authenticated, redirecting to OAuth...');
             }
-            
-            // Redirect to Apps Script Web App which will handle OAuth
-            // The Web App will redirect back with user data
-            const frontendBaseUrl = window.location.origin + window.location.pathname.replace('/login.html', '');
-            const redirectUrl = `${frontendBaseUrl}/login.html`;
-            const apiUrl = API_URL;
-            // Redirect to Web App with redirect parameter
-            window.location.href = `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`;
-        });
 
-        // Check if already logged in
-        if (isAuthenticated()) {
-            const user = getCurrentUser();
-            if (user) {
-                redirectToDashboard(user.role);
+            // Check if already logged in
+            if (isAuthenticated()) {
+                const user = getCurrentUser();
+                if (user) {
+                    redirectToDashboard(user.role);
+                    return;
+                }
             }
-        }
+
+            // Initialize login button
+            const loginBtn = document.getElementById('loginBtn');
+            if (!loginBtn) {
+                console.error('Login button not found!');
+                return;
+            }
+
+            loginBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Login button clicked');
+                
+                const statusEl = document.getElementById('loginStatus');
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    statusEl.className = 'alert alert-info';
+                    statusEl.textContent = 'Redirecting to Google sign-in...';
+                }
+                
+                // Get API URL from auth.js (should be loaded by now)
+                const apiUrl = typeof API_URL !== 'undefined' ? API_URL : 'https://script.google.com/macros/s/AKfycbwtvbmUP8SDG3pmLZ0uCxoZjZ8Fs61XFHXZI5sh0GmkMnRK_VrrW7DHO-DpG-5o5elR/exec';
+                
+                // Redirect to Apps Script Web App which will handle OAuth
+                // The Web App will redirect back with user data
+                const frontendBaseUrl = window.location.origin + window.location.pathname.replace('/login.html', '');
+                const redirectUrl = `${frontendBaseUrl}/login.html`;
+                
+                console.log('Redirecting to:', `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`);
+                
+                // Redirect to Web App with redirect parameter
+                window.location.href = `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`;
+            });
+        });
     </script>
 </body>
 </html>
