@@ -728,6 +728,15 @@ function exportToDrive(date) {
 // ============================================
 
 /**
+ * Create JSON response (Apps Script Web Apps automatically add CORS headers)
+ * But we need to ensure it's not a redirect
+ */
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
  * Handle GET requests
  */
 function doGet(e) {
@@ -755,14 +764,14 @@ function doGet(e) {
       console.log('getUserFromRequest returned:', user ? 'user found' : 'null');
       if (!user) {
         console.log('No user found, returning Unauthorized');
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: false,
           error: 'Unauthorized',
           debug: {
             hasUserEmailParam: !!e.parameter.userEmail,
             userEmailValue: e.parameter.userEmail || 'not provided'
           }
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
       }
     }
     
@@ -860,36 +869,36 @@ window.location.replace('${errorUrl}');
         })).setMimeType(ContentService.MimeType.JSON);
         
       case 'getUser':
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: true,
           user: user
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
         
       case 'getStudents':
         const schoolId = e.parameter.schoolId || user.schoolId;
         const className = e.parameter.class;
         const students = getStudents(schoolId, className);
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: true,
           data: students
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
         
       case 'getSchool':
         const school = getSchool(user.schoolId);
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: true,
           data: school
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
         
       case 'getTodayAttendance':
         const attSchoolId = e.parameter.schoolId || user.schoolId;
         const attClass = e.parameter.class;
         const attDate = e.parameter.date || getCurrentDate();
         const attendance = getTodayAttendance(attSchoolId, attClass, attDate);
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: true,
           data: attendance
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
         
       case 'getReport':
         const repSchoolId = e.parameter.schoolId || user.schoolId;
@@ -897,26 +906,26 @@ window.location.replace('${errorUrl}');
         const startDate = e.parameter.startDate;
         const endDate = e.parameter.endDate;
         const report = getAttendanceReport(repSchoolId, repClass, startDate, endDate);
-        return ContentService.createTextOutput(JSON.stringify(report)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(report);
         
       case 'getAbsentStudents':
         const absSchoolId = e.parameter.schoolId || user.schoolId;
         const absClass = e.parameter.class;
         const absDate = e.parameter.date || getCurrentDate();
         const absent = getAbsentStudents(absSchoolId, absClass, absDate);
-        return ContentService.createTextOutput(JSON.stringify(absent)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(absent);
         
       default:
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: false,
           error: 'Invalid action'
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
     }
   } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createJsonResponse({
       success: false,
       error: e.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
@@ -930,10 +939,10 @@ function doPost(e) {
     const user = getUserFromRequest(e);
     
     if (!user) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return createJsonResponse({
         success: false,
         error: 'Unauthorized'
-      })).setMimeType(ContentService.MimeType.JSON);
+      });
     }
     
     switch (action) {
@@ -945,11 +954,11 @@ function doPost(e) {
           data.remark || '',
           e
         );
-        return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(result);
         
       case 'markAttendanceBatch':
         const batchResult = markAttendanceBatch(data.attendanceData || [], e);
-        return ContentService.createTextOutput(JSON.stringify(batchResult)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(batchResult);
         
       case 'editAttendance':
         const editResult = editAttendance(
@@ -957,27 +966,27 @@ function doPost(e) {
           data.status,
           data.remark || ''
         );
-        return ContentService.createTextOutput(JSON.stringify(editResult)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(editResult);
         
       case 'exportToDrive':
         const exportResult = exportToDrive(data.date);
-        return ContentService.createTextOutput(JSON.stringify(exportResult)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(exportResult);
         
       case 'updateWhatsAppAlertSetting':
         const updateResult = updateWhatsAppAlertSetting(data.studentId, data.enabled);
-        return ContentService.createTextOutput(JSON.stringify(updateResult)).setMimeType(ContentService.MimeType.JSON);
+        return createJsonResponse(updateResult);
         
       default:
-        return ContentService.createTextOutput(JSON.stringify({
+        return createJsonResponse({
           success: false,
           error: 'Invalid action'
-        })).setMimeType(ContentService.MimeType.JSON);
+        });
     }
   } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createJsonResponse({
       success: false,
       error: e.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
