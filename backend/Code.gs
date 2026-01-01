@@ -462,9 +462,9 @@ function markAttendance(studentId, status, type, remark, e) {
 /**
  * Edit attendance (within 15 minutes)
  */
-function editAttendance(logId, newStatus, newRemark) {
+function editAttendance(logId, newStatus, newRemark, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -582,9 +582,9 @@ function markAttendanceBatch(attendanceData, e) {
 /**
  * Get attendance report for a date range
  */
-function getAttendanceReport(schoolId, className, startDate, endDate) {
+function getAttendanceReport(schoolId, className, startDate, endDate, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -662,9 +662,9 @@ function getAttendanceReport(schoolId, className, startDate, endDate) {
 /**
  * Get absent students for a date
  */
-function getAbsentStudents(schoolId, className, date) {
+function getAbsentStudents(schoolId, className, date, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -905,14 +905,14 @@ window.location.replace('${errorUrl}');
         const repClass = e.parameter.class;
         const startDate = e.parameter.startDate;
         const endDate = e.parameter.endDate;
-        const report = getAttendanceReport(repSchoolId, repClass, startDate, endDate);
+        const report = getAttendanceReport(repSchoolId, repClass, startDate, endDate, e);
         return createJsonResponse(report);
         
       case 'getAbsentStudents':
         const absSchoolId = e.parameter.schoolId || user.schoolId;
         const absClass = e.parameter.class;
         const absDate = e.parameter.date || getCurrentDate();
-        const absent = getAbsentStudents(absSchoolId, absClass, absDate);
+        const absent = getAbsentStudents(absSchoolId, absClass, absDate, e);
         return createJsonResponse(absent);
         
       default:
@@ -964,7 +964,8 @@ function doPost(e) {
         const editResult = editAttendance(
           data.logId,
           data.status,
-          data.remark || ''
+          data.remark || '',
+          e
         );
         return createJsonResponse(editResult);
         
@@ -973,7 +974,7 @@ function doPost(e) {
         return createJsonResponse(exportResult);
         
       case 'updateWhatsAppAlertSetting':
-        const updateResult = updateWhatsAppAlertSetting(data.studentId, data.enabled);
+        const updateResult = updateWhatsAppAlertSetting(data.studentId, data.enabled, e);
         return createJsonResponse(updateResult);
         
       default:
@@ -1453,9 +1454,9 @@ function triggerAbsentStudentAlerts(schoolId, className, date) {
  * @param {boolean} enabled - Enable (true) or disable (false) alerts
  * @returns {Object} Result object
  */
-function updateWhatsAppAlertSetting(studentId, enabled) {
+function updateWhatsAppAlertSetting(studentId, enabled, e) {
   try {
-    const user = getUserFromRequest();
+    const user = getUserFromRequest(e);
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
