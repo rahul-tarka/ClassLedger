@@ -153,7 +153,7 @@ async function loadOverviewStats() {
 }
 
 /**
- * Render overview statistics
+ * Render overview statistics (Enhanced for Principal)
  */
 function renderOverviewStats(stats) {
   const container = document.getElementById('overviewStats');
@@ -163,28 +163,67 @@ function renderOverviewStats(stats) {
     ? ((stats.present / stats.totalStudents) * 100).toFixed(1)
     : 0;
   
+  const absentRate = stats.totalStudents > 0
+    ? ((stats.absent / stats.totalStudents) * 100).toFixed(1)
+    : 0;
+  
+  // Determine status color
+  let statusColor = 'var(--success-color)';
+  let statusText = 'Excellent';
+  if (attendanceRate < 80) {
+    statusColor = 'var(--danger-color)';
+    statusText = 'Needs Attention';
+  } else if (attendanceRate < 90) {
+    statusColor = 'var(--warning-color)';
+    statusText = 'Good';
+  }
+  
   container.innerHTML = `
-    <div class="summary">
+    <div class="summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div class="summary-card" style="grid-column: span 2; background: linear-gradient(135deg, ${statusColor}15 0%, ${statusColor}05 100%); border: 2px solid ${statusColor}40;">
+        <div class="summary-label" style="font-size: 0.875rem; color: var(--text-secondary);">Overall Attendance Rate</div>
+        <div class="summary-value" style="font-size: 3rem; font-weight: 700; color: ${statusColor}; margin: 0.5rem 0;">
+          ${attendanceRate}%
+        </div>
+        <div style="font-size: 0.875rem; color: ${statusColor}; font-weight: 600;">
+          ${statusText}
+        </div>
+      </div>
+      
       <div class="summary-card">
         <div class="summary-label">Total Students</div>
-        <div class="summary-value">${stats.totalStudents}</div>
+        <div class="summary-value" style="font-size: 2rem;">${stats.totalStudents}</div>
       </div>
-      <div class="summary-card">
+      
+      <div class="summary-card" style="background: var(--success-color)15; border-left: 4px solid var(--success-color);">
         <div class="summary-label">Present Today</div>
-        <div class="summary-value present">${stats.present}</div>
+        <div class="summary-value present" style="font-size: 2rem;">${stats.present}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+          ${stats.totalStudents > 0 ? ((stats.present / stats.totalStudents) * 100).toFixed(1) : 0}% of total
+        </div>
       </div>
-      <div class="summary-card">
+      
+      <div class="summary-card" style="background: var(--danger-color)15; border-left: 4px solid var(--danger-color);">
         <div class="summary-label">Absent Today</div>
-        <div class="summary-value absent">${stats.absent}</div>
+        <div class="summary-value absent" style="font-size: 2rem;">${stats.absent}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+          ${absentRate}% of total
+        </div>
       </div>
-      <div class="summary-card">
+      
+      <div class="summary-card" style="background: var(--warning-color)15; border-left: 4px solid var(--warning-color);">
         <div class="summary-label">Late Today</div>
-        <div class="summary-value late">${stats.late}</div>
+        <div class="summary-value late" style="font-size: 2rem;">${stats.late}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+          ${stats.totalStudents > 0 ? ((stats.late / stats.totalStudents) * 100).toFixed(1) : 0}% of total
+        </div>
       </div>
-      <div class="summary-card">
-        <div class="summary-label">Attendance Rate</div>
-        <div class="summary-value">${attendanceRate}%</div>
-      </div>
+    </div>
+    
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+      <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+        <strong>📊 Principal Dashboard:</strong> This is a read-only overview. For detailed management, contact your Admin.
+      </p>
     </div>
   `;
 }
@@ -582,18 +621,23 @@ function disableEditButtons() {
 }
 
 /**
- * Render absent students list
+ * Render absent students list (Read-only for Principal)
  */
 function renderAbsentStudents(absentStudents) {
   const container = document.getElementById('absentStudents');
   if (!container) return;
   
   if (absentStudents.length === 0) {
-    container.innerHTML = '<p class="text-center">No absent students</p>';
+    container.innerHTML = '<p class="text-center">✅ No absent students today</p>';
     return;
   }
   
   container.innerHTML = `
+    <div style="margin-bottom: 1rem;">
+      <span class="badge" style="background: var(--danger-color); color: white; padding: 0.5rem 1rem; border-radius: 0.25rem;">
+        ${absentStudents.length} Absent Student${absentStudents.length > 1 ? 's' : ''}
+      </span>
+    </div>
     <table class="table">
       <thead>
         <tr>
@@ -601,19 +645,28 @@ function renderAbsentStudents(absentStudents) {
           <th>Name</th>
           <th>Section</th>
           <th>Parent Mobile</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
         ${absentStudents.map(student => `
           <tr>
             <td>${student.roll}</td>
-            <td>${student.name}</td>
+            <td><strong>${student.name}</strong></td>
             <td>${student.section}</td>
             <td>${student.parentMobile || 'N/A'}</td>
+            <td>
+              <span style="color: var(--danger-color); font-weight: 600;">Absent</span>
+            </td>
           </tr>
         `).join('')}
       </tbody>
     </table>
+    <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+      <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+        <strong>Note:</strong> This is a read-only view. Contact Admin to manage WhatsApp alerts.
+      </p>
+    </div>
   `;
 }
 

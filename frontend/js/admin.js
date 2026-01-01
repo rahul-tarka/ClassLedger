@@ -322,6 +322,14 @@ function renderAbsentStudents(absentStudents) {
   }
   
   container.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <span class="badge" style="background: var(--danger-color); color: white; padding: 0.5rem 1rem; border-radius: 0.25rem; font-weight: 600;">
+        ${absentStudents.length} Absent Student${absentStudents.length > 1 ? 's' : ''}
+      </span>
+      <button class="btn btn-secondary" onclick="sendBulkWhatsAppAlerts()" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+        📱 Send Alerts to All
+      </button>
+    </div>
     <table class="table">
       <thead>
         <tr>
@@ -330,13 +338,14 @@ function renderAbsentStudents(absentStudents) {
           <th>Section</th>
           <th>Parent Mobile</th>
           <th>WhatsApp Alert</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         ${absentStudents.map(student => `
           <tr>
             <td>${student.roll}</td>
-            <td>${student.name}</td>
+            <td><strong>${student.name}</strong></td>
             <td>${student.section}</td>
             <td>${student.parentMobile || 'N/A'}</td>
             <td>
@@ -345,13 +354,23 @@ function renderAbsentStudents(absentStudents) {
                        ${student.whatsappAlertEnabled ? 'checked' : ''}
                        onchange="toggleWhatsAppAlert('${student.studentId}', this.checked)"
                        style="cursor: pointer;">
-                <span style="font-size: 0.875rem;">Enable</span>
+                <span style="font-size: 0.875rem;">${student.whatsappAlertEnabled ? 'Enabled' : 'Disabled'}</span>
               </label>
+            </td>
+            <td>
+              <button class="btn btn-sm" onclick="sendTestAlert('${student.studentId}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                Test Alert
+              </button>
             </td>
           </tr>
         `).join('')}
       </tbody>
     </table>
+    <div style="margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 0.5rem; border-left: 4px solid var(--success-color);">
+      <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+        <strong>🔧 Admin Controls:</strong> Manage WhatsApp alerts for absent students. Alerts are sent automatically after 10:30 AM IST.
+      </p>
+    </div>
   `;
 }
 
@@ -383,7 +402,24 @@ async function toggleWhatsAppAlert(studentId, enabled) {
 }
 
 /**
- * Render attendance statistics
+ * Send bulk WhatsApp alerts to all absent students
+ */
+async function sendBulkWhatsAppAlerts() {
+  const confirmed = confirm('Send WhatsApp alerts to all absent students with alerts enabled?');
+  if (!confirmed) return;
+  
+  showToast('Bulk alert feature coming soon. Alerts are sent automatically after 10:30 AM IST.', 'info');
+}
+
+/**
+ * Send test WhatsApp alert for a student
+ */
+async function sendTestAlert(studentId) {
+  showToast('Test alert feature coming soon. Use the triggerWhatsAppAbsentAlerts function in Apps Script.', 'info');
+}
+
+/**
+ * Render attendance statistics (Enhanced for Admin)
  */
 function renderAttendanceStats(attendanceData) {
   const container = document.getElementById('attendanceStats');
@@ -395,8 +431,6 @@ function renderAttendanceStats(attendanceData) {
   let total = 0;
   
   // Get total students for this class
-  // Note: This requires loading students separately
-  // For now, calculate from attendance data
   const studentIds = new Set();
   Object.keys(attendanceData).forEach(studentId => {
     studentIds.add(studentId);
@@ -410,23 +444,34 @@ function renderAttendanceStats(attendanceData) {
     }
   });
   
+  const attendanceRate = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+  
   container.innerHTML = `
-    <div class="summary">
-      <div class="summary-card">
+    <div class="summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+      <div class="summary-card" style="background: #f8fafc; border: 2px solid var(--primary-color)40;">
         <div class="summary-label">Total Students</div>
-        <div class="summary-value">${total}</div>
+        <div class="summary-value" style="font-size: 2rem; font-weight: 700;">${total}</div>
       </div>
-      <div class="summary-card">
+      <div class="summary-card" style="background: var(--success-color)15; border-left: 4px solid var(--success-color);">
         <div class="summary-label">Present</div>
-        <div class="summary-value present">${present}</div>
+        <div class="summary-value present" style="font-size: 2rem;">${present}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary);">${total > 0 ? ((present / total) * 100).toFixed(1) : 0}%</div>
       </div>
-      <div class="summary-card">
+      <div class="summary-card" style="background: var(--danger-color)15; border-left: 4px solid var(--danger-color);">
         <div class="summary-label">Absent</div>
-        <div class="summary-value absent">${absent}</div>
+        <div class="summary-value absent" style="font-size: 2rem;">${absent}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary);">${total > 0 ? ((absent / total) * 100).toFixed(1) : 0}%</div>
       </div>
-      <div class="summary-card">
+      <div class="summary-card" style="background: var(--warning-color)15; border-left: 4px solid var(--warning-color);">
         <div class="summary-label">Late</div>
-        <div class="summary-value late">${late}</div>
+        <div class="summary-value late" style="font-size: 2rem;">${late}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary);">${total > 0 ? ((late / total) * 100).toFixed(1) : 0}%</div>
+      </div>
+      <div class="summary-card" style="grid-column: span 2; background: linear-gradient(135deg, var(--primary-color)15 0%, var(--primary-color)05 100%); border: 2px solid var(--primary-color)40;">
+        <div class="summary-label">Attendance Rate</div>
+        <div class="summary-value" style="font-size: 2.5rem; font-weight: 700; color: var(--primary-color);">
+          ${attendanceRate}%
+        </div>
       </div>
     </div>
   `;
