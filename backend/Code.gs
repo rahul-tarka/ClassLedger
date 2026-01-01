@@ -983,10 +983,41 @@ function doPost(e) {
     console.log('POST parameters:', JSON.stringify(e.parameter));
     console.log('userEmail parameter:', e.parameter.userEmail);
     console.log('POST data:', e.postData ? e.postData.contents : 'no postData');
+    console.log('POST content type:', e.postData ? e.postData.type : 'no postData');
     
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
+    // Handle both JSON and form-encoded POST data
+    let data = {};
+    let action = '';
+    
+    if (e.postData && e.postData.contents) {
+      const contentType = e.postData.type || '';
+      if (contentType.includes('application/json')) {
+        // JSON format
+        data = JSON.parse(e.postData.contents);
+        action = data.action;
+      } else {
+        // Form-encoded format (application/x-www-form-urlencoded)
+        // Apps Script automatically parses form data into e.parameter
+        action = e.parameter.action || '';
+        // Get other fields from parameters
+        data = {
+          action: action,
+          studentId: e.parameter.studentId || '',
+          status: e.parameter.status || '',
+          type: e.parameter.type || '',
+          remark: e.parameter.remark || '',
+          logId: e.parameter.logId || '',
+          enabled: e.parameter.enabled || ''
+        };
+      }
+    } else {
+      // No POST data, try to get action from parameters
+      action = e.parameter.action || '';
+      data = e.parameter;
+    }
+    
     console.log('POST action:', action);
+    console.log('POST parsed data:', JSON.stringify(data));
     
     const user = getUserFromRequest(e);
     console.log('getUserFromRequest returned:', user ? 'user found' : 'null');

@@ -285,6 +285,7 @@ async function apiRequest(endpoint, options = {}) {
 
 /**
  * Make authenticated POST request
+ * Using form-encoded to avoid CORS preflight issues
  */
 async function apiPost(action, data) {
   // Get user email to add to URL for Apps Script authentication
@@ -305,15 +306,22 @@ async function apiPost(action, data) {
   console.log('apiPost: Making POST request with action:', action);
   console.log('apiPost: Data:', data);
   
+  // Use form-encoded instead of JSON to avoid CORS preflight
+  // Apps Script doPost can handle both JSON and form-encoded
+  const formData = new URLSearchParams();
+  formData.append('action', action);
+  for (const key in data) {
+    if (data[key] !== null && data[key] !== undefined) {
+      formData.append(key, String(data[key]));
+    }
+  }
+  
   return apiRequest(endpoint, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body: JSON.stringify({
-      action: action,
-      ...data
-    })
+    body: formData.toString()
   });
 }
 
