@@ -160,9 +160,126 @@ function renderOverviewStats(stats) {
 /**
  * Setup filters for reports
  */
-function setupFilters() {
-  // Reuse admin dashboard functionality but in read-only mode
-  // Principal can view all reports but cannot edit
+async function setupFilters() {
+  // Load all classes for dropdown
+  await loadAllClasses();
+  
+  // Setup date selector
+  const dateInput = document.getElementById('dateSelect');
+  if (dateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    dateInput.max = today;
+    dateInput.addEventListener('change', () => {
+      if (document.getElementById('classSelect')?.value) {
+        loadClassReport();
+      }
+    });
+  }
+  
+  // Setup class selector
+  const classSelect = document.getElementById('classSelect');
+  if (classSelect) {
+    classSelect.addEventListener('change', () => {
+      if (classSelect.value) {
+        loadClassReport();
+      }
+    });
+  }
+  
+  // Setup report date range
+  setupReportRange();
+}
+
+/**
+ * Load all classes for the school
+ */
+async function loadAllClasses() {
+  try {
+    console.log('Loading all classes for school...');
+    
+    // Use getAllClasses endpoint
+    const response = await apiGet('getAllClasses', {});
+    
+    // Fallback: if getAllClasses not available, get all students and extract classes
+    if (!response.success || !response.data || response.data.length === 0) {
+      console.log('getAllClasses not available, trying getStudents without class...');
+      const studentsResponse = await apiGet('getStudents', {});
+      if (studentsResponse.success && studentsResponse.data) {
+        const classes = [...new Set(studentsResponse.data.map(s => s.class))].sort();
+        populateClassDropdown(classes);
+        return;
+      }
+    }
+    
+    if (response.success && response.data) {
+      populateClassDropdown(response.data);
+    } else {
+      console.error('Failed to load classes:', response);
+    }
+  } catch (error) {
+    console.error('Load classes error:', error);
+  }
+}
+
+/**
+ * Populate class dropdown with classes
+ */
+function populateClassDropdown(classes) {
+  const classSelect = document.getElementById('classSelect');
+  const reportClassSelect = document.getElementById('reportClassSelect');
+  
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    classes.forEach(className => {
+      const option = document.createElement('option');
+      option.value = className;
+      option.textContent = className;
+      classSelect.appendChild(option);
+    });
+    console.log(`✅ Populated ${classes.length} classes in dropdown`);
+  }
+  
+  // Also populate report class selector
+  if (reportClassSelect) {
+    reportClassSelect.innerHTML = '<option value="">Select Class</option>';
+    classes.forEach(className => {
+      const option = document.createElement('option');
+      option.value = className;
+      option.textContent = className;
+      reportClassSelect.appendChild(option);
+    });
+  }
+}
+
+/**
+ * Load class report for selected date (reuse admin function)
+ */
+async function loadClassReport() {
+  // Reuse admin dashboard function
+  if (typeof loadClassReport === 'function' && window.loadClassReport) {
+    await window.loadClassReport();
+  } else {
+    // If admin.js is loaded, use it
+    const classSelect = document.getElementById('classSelect');
+    const dateSelect = document.getElementById('dateSelect');
+    if (classSelect && dateSelect && classSelect.value && dateSelect.value) {
+      // Trigger admin's loadClassReport
+      if (window.loadClassReport) {
+        await window.loadClassReport();
+      }
+    }
+  }
+}
+
+/**
+ * Setup report date range (reuse admin function)
+ */
+function setupReportRange() {
+  // Reuse admin dashboard function if available
+  if (typeof setupReportRange === 'function' && window.setupReportRange) {
+    window.setupReportRange();
+  }
 }
 
 /**

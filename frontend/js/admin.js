@@ -91,25 +91,63 @@ async function loadSchoolInfo() {
  */
 async function loadAllClasses() {
   try {
-    // Get unique classes from students
-    const response = await apiGet('getStudents', {});
-    if (response.success && response.data) {
-      const classes = [...new Set(response.data.map(s => s.class))].sort();
-      allClasses = classes;
-      
-      const classSelect = document.getElementById('classSelect');
-      if (classSelect) {
-        classSelect.innerHTML = '<option value="">Select Class</option>';
-        classes.forEach(className => {
-          const option = document.createElement('option');
-          option.value = className;
-          option.textContent = className;
-          classSelect.appendChild(option);
-        });
+    console.log('Loading all classes for school...');
+    
+    // Use new getAllClasses endpoint or get all students without class filter
+    const response = await apiGet('getAllClasses', {});
+    
+    // Fallback: if getAllClasses not available, get all students and extract classes
+    if (!response.success || !response.data || response.data.length === 0) {
+      console.log('getAllClasses not available, trying getStudents without class...');
+      const studentsResponse = await apiGet('getStudents', {});
+      if (studentsResponse.success && studentsResponse.data) {
+        const classes = [...new Set(studentsResponse.data.map(s => s.class))].sort();
+        allClasses = classes;
+        populateClassDropdown(classes);
+        return;
       }
+    }
+    
+    if (response.success && response.data) {
+      allClasses = response.data;
+      populateClassDropdown(response.data);
+    } else {
+      console.error('Failed to load classes:', response);
+      showMessage('Failed to load classes. Please refresh the page.', 'error');
     }
   } catch (error) {
     console.error('Load classes error:', error);
+    showMessage('Error loading classes. Please refresh the page.', 'error');
+  }
+}
+
+/**
+ * Populate class dropdown with classes
+ */
+function populateClassDropdown(classes) {
+  const classSelect = document.getElementById('classSelect');
+  const reportClassSelect = document.getElementById('reportClassSelect');
+  
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    classes.forEach(className => {
+      const option = document.createElement('option');
+      option.value = className;
+      option.textContent = className;
+      classSelect.appendChild(option);
+    });
+    console.log(`✅ Populated ${classes.length} classes in dropdown`);
+  }
+  
+  // Also populate report class selector
+  if (reportClassSelect) {
+    reportClassSelect.innerHTML = '<option value="">Select Class</option>';
+    classes.forEach(className => {
+      const option = document.createElement('option');
+      option.value = className;
+      option.textContent = className;
+      reportClassSelect.appendChild(option);
+    });
   }
 }
 

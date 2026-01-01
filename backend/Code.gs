@@ -268,15 +268,19 @@ function getStudents(schoolId, className) {
       if (rowSchoolId === schoolId && rowClass === className && active) {
         // Check if whatsapp_alert_enabled column exists (column 8, index 8)
         const whatsappAlertEnabled = row.length > 8 ? (row[8] === true || String(row[8]).toLowerCase() === 'true') : false;
+        // Check if parent_name column exists (column 9, index 9)
+        const parentName = row.length > 9 ? String(row[9]) : '';
         
         students.push({
           studentId: String(row[0]),
+          schoolId: rowSchoolId,
           name: String(row[2]),
           class: rowClass,
           section: String(row[4]),
           roll: Number(row[5]) || 0,
           parentMobile: String(row[6]),
-          whatsappAlertEnabled: whatsappAlertEnabled
+          whatsappAlertEnabled: whatsappAlertEnabled,
+          parentName: parentName
         });
       }
     }
@@ -286,6 +290,68 @@ function getStudents(schoolId, className) {
     return students;
   } catch (e) {
     console.error('Get students error:', e);
+    return [];
+  }
+}
+
+/**
+ * Get all students for a school (no class filter) - for Admin/Principal
+ */
+function getAllStudentsForSchool(schoolId) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.studentMaster, 'Student_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    const students = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowSchoolId = String(row[1]);
+      const active = row[7] === true || String(row[7]).toLowerCase() === 'true';
+      
+      if (rowSchoolId === schoolId && active) {
+        const rowClass = String(row[3]);
+        const whatsappAlertEnabled = row.length > 8 ? (row[8] === true || String(row[8]).toLowerCase() === 'true') : false;
+        const parentName = row.length > 9 ? String(row[9]) : '';
+        
+        students.push({
+          studentId: String(row[0]),
+          schoolId: rowSchoolId,
+          name: String(row[2]),
+          class: rowClass,
+          section: String(row[4]),
+          roll: Number(row[5]) || 0,
+          parentMobile: String(row[6]),
+          whatsappAlertEnabled: whatsappAlertEnabled,
+          parentName: parentName
+        });
+      }
+    }
+    
+    // Sort by class, then roll number
+    students.sort((a, b) => {
+      if (a.class !== b.class) {
+        return a.class.localeCompare(b.class);
+      }
+      return a.roll - b.roll;
+    });
+    return students;
+  } catch (e) {
+    console.error('Get all students error:', e);
+    return [];
+  }
+}
+
+/**
+ * Get all unique classes for a school - for Admin/Principal dropdowns
+ */
+function getAllClassesForSchool(schoolId) {
+  try {
+    const students = getAllStudentsForSchool(schoolId);
+    const classes = [...new Set(students.map(s => s.class))].sort();
+    return classes;
+  } catch (e) {
+    console.error('Get all classes error:', e);
     return [];
   }
 }
@@ -925,10 +991,29 @@ window.location.replace('${errorUrl}');
       case 'getStudents':
         const schoolId = e.parameter.schoolId || user.schoolId;
         const className = e.parameter.class;
+        
+        // If no class specified, return all students for the school (for Admin/Principal to get all classes)
+        if (!className) {
+          const allStudents = getAllStudentsForSchool(schoolId);
+          return createJsonResponse({
+            success: true,
+            data: allStudents
+          });
+        }
+        
         const students = getStudents(schoolId, className);
         return createJsonResponse({
           success: true,
           data: students
+        });
+      
+      case 'getAllClasses':
+        // New endpoint to get all classes for a school
+        const classesSchoolId = e.parameter.schoolId || user.schoolId;
+        const classes = getAllClassesForSchool(classesSchoolId);
+        return createJsonResponse({
+          success: true,
+          data: classes
         });
         
       case 'getSchool':
