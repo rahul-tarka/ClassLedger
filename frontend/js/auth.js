@@ -186,13 +186,25 @@ async function apiRequest(endpoint, options = {}) {
       console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
       
     } catch (fetchError) {
-      console.error('Fetch error (likely CORS/302 redirect):', fetchError);
+      console.error('❌ Fetch error (likely CORS/302 redirect):', fetchError);
+      console.error('Request URL was:', requestUrl);
+      console.error('Request method:', options.method || 'GET');
       console.error('This usually means:');
-      console.error('1. Apps Script backend not updated with userEmail support');
-      console.error('2. Web App deployment requires OAuth (causes 302 redirect)');
-      console.error('3. CORS headers not properly set');
+      console.error('1. ⚠️ Apps Script backend not updated with latest code (doPost, getUserFromRequest)');
+      console.error('2. ⚠️ Web App not redeployed after code update (must create NEW version)');
+      console.error('3. ⚠️ CORS preflight (OPTIONS) failing - backend doOptions() not working');
+      console.error('4. ⚠️ userEmail parameter not being read by backend');
       
-      throw new Error('Network error: Please ensure Apps Script backend is updated. Error: ' + fetchError.message);
+      // More specific error message
+      let errorMsg = 'Network error: Failed to connect to backend. ';
+      if (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('CORS')) {
+        errorMsg += 'This is usually a CORS issue. Please ensure:\n';
+        errorMsg += '1. Backend code is updated in Apps Script\n';
+        errorMsg += '2. Web App is redeployed (NEW version)\n';
+        errorMsg += '3. Backend has doOptions() function for CORS preflight';
+      }
+      
+      throw new Error(errorMsg + ' Original error: ' + fetchError.message);
     }
     
     // Check if response is JSON
