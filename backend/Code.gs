@@ -761,6 +761,15 @@ function exportToDrive(date) {
 // ============================================
 
 /**
+ * Handle OPTIONS requests (CORS preflight for POST requests)
+ */
+function doOptions(e) {
+  // Apps Script Web Apps automatically handle CORS, but we return empty response for preflight
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
  * Create JSON response (Apps Script Web Apps automatically add CORS headers)
  * But we need to ensure it's not a redirect
  */

@@ -275,7 +275,18 @@ async function apiRequest(endpoint, options = {}) {
  * Make authenticated POST request
  */
 async function apiPost(action, data) {
-  return apiRequest('', {
+  // Get user email to add to URL for Apps Script authentication
+  const user = getCurrentUser();
+  let endpoint = '';
+  if (user && user.email) {
+    const userEmail = user.email || user.Email || user.userEmail || user.user_email;
+    if (userEmail) {
+      endpoint = `?userEmail=${encodeURIComponent(userEmail)}`;
+      console.log('apiPost: Added userEmail to endpoint:', endpoint);
+    }
+  }
+  
+  return apiRequest(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
