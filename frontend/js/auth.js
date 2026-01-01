@@ -223,14 +223,30 @@ async function apiRequest(endpoint, options = {}) {
     
     // Check for unauthorized - might need to re-authenticate
     if (data.success === false && data.error === 'Unauthorized') {
-      console.log('Unauthorized response, redirecting to login');
-      sessionStorage.clear();
-      // Return error object instead of undefined to prevent crashes
-      // The redirect will happen, but we also return an error for the caller
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 100);
-      throw new Error('Unauthorized - please login again');
+      console.error('Unauthorized response received');
+      console.error('Debug info:', data.debug);
+      
+      // Check if userEmail was sent but still unauthorized
+      if (data.debug && data.debug.hasUserEmailParam) {
+        console.error('CRITICAL: userEmail was sent but user not found!');
+        console.error('Possible reasons:');
+        console.error('1. Email not in Teacher_Master sheet');
+        console.error('2. Email mismatch (check exact spelling)');
+        console.error('3. Active column is FALSE');
+        console.error('4. Backend code not updated in Apps Script');
+        
+        // Don't clear sessionStorage yet - might be a backend issue
+        // Only clear if we're sure it's an auth issue
+        throw new Error('Unauthorized: Email not found or not active. Check Teacher_Master sheet.');
+      } else {
+        // No userEmail was sent - clear session and redirect
+        console.log('No userEmail in request, clearing session and redirecting');
+        sessionStorage.clear();
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 100);
+        throw new Error('Unauthorized - please login again');
+      }
     }
     
     if (!response.ok) {

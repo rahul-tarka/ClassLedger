@@ -152,12 +152,19 @@ function logAudit(email, action, metadata) {
 function validateUser(email) {
   try {
     if (!email) {
+      console.log('validateUser: No email provided');
       return null;
     }
+    
+    // Normalize email
+    const normalizedEmail = String(email).trim().toLowerCase();
+    console.log('validateUser: Checking email:', normalizedEmail);
     
     const sheetIds = getSheetIds();
     const sheet = getSheet(sheetIds.teacherMaster, 'Teacher_Master');
     const data = sheet.getDataRange().getValues();
+    
+    console.log('validateUser: Total rows in sheet:', data.length);
     
     // Skip header row
     for (let i = 1; i < data.length; i++) {
@@ -169,7 +176,10 @@ function validateUser(email) {
       const classAssigned = String(row[4] || '');
       const active = row[5] === true || String(row[5]).toLowerCase() === 'true';
       
-      if (rowEmail === email.toLowerCase() && active) {
+      console.log(`validateUser: Row ${i} - Email: ${rowEmail}, Active: ${active}, Match: ${rowEmail === normalizedEmail}`);
+      
+      if (rowEmail === normalizedEmail && active) {
+        console.log('validateUser: User found and authorized!', { email: rowEmail, name, role, schoolId });
         return {
           email: rowEmail,
           name: name,
@@ -180,9 +190,11 @@ function validateUser(email) {
       }
     }
     
+    console.log('validateUser: User not found or not active');
     return null;
   } catch (e) {
     console.error('User validation error:', e);
+    console.error('Error stack:', e.stack);
     return null;
   }
 }
@@ -192,20 +204,41 @@ function validateUser(email) {
  * For cross-origin requests, userEmail can be passed as parameter
  */
 function getUserFromRequest(e) {
-  try {
-    // First try OAuth (Session.getActiveUser)
-    const email = Session.getActiveUser().getEmail();
-    return validateUser(email);
-  } catch (err) {
-    // OAuth not available, try userEmail parameter (for cross-origin requests)
-    if (e && e.parameter && e.parameter.userEmail) {
-      const email = decodeURIComponent(e.parameter.userEmail);
-      console.log('Using userEmail parameter:', email);
-      return validateUser(email);
+  // CRITICAL: Check userEmail parameter FIRST for cross-origin requests
+  // This avoids 302 redirects that cause CORS issues
+  if (e && e.parameter && e.parameter.userEmail) {
+    try {
+      const email = decodeURIComponent(String(e.parameter.userEmail));
+      console.log('getUserFromRequest: Using userEmail parameter:', email);
+      const user = validateUser(email);
+      if (user) {
+        console.log('getUserFromRequest: User found via userEmail parameter');
+        return user;
+      } else {
+        console.log('getUserFromRequest: User not found via userEmail parameter');
+      }
+    } catch (err) {
+      console.error('getUserFromRequest: Error processing userEmail parameter:', err);
     }
-    console.log('No userEmail parameter found, e:', e ? 'exists' : 'null');
-    return null;
   }
+  
+  // Fallback to OAuth (Session.getActiveUser) if userEmail not provided or not found
+  try {
+    const email = Session.getActiveUser().getEmail();
+    console.log('getUserFromRequest: Using OAuth email:', email);
+    const user = validateUser(email);
+    if (user) {
+      console.log('getUserFromRequest: User found via OAuth');
+      return user;
+    } else {
+      console.log('getUserFromRequest: User not found via OAuth');
+    }
+  } catch (err) {
+    console.log('getUserFromRequest: OAuth not available (expected for cross-origin):', err.message);
+  }
+  
+  console.log('getUserFromRequest: No user found via any method');
+  return null;
 }
 
 // ============================================
