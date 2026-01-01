@@ -462,6 +462,7 @@ async function generateDateRangeReport() {
   const startDate = document.getElementById('reportStartDate')?.value;
   const endDate = document.getElementById('reportEndDate')?.value;
   const reportClass = document.getElementById('reportClassSelect')?.value;
+  const generateReportBtn = document.getElementById('generateReportBtn');
   
   if (!startDate || !endDate) {
     showMessage('Please select start and end dates', 'error');
@@ -473,8 +474,15 @@ async function generateDateRangeReport() {
     return;
   }
   
+  // Show loading on button
+  const originalBtnText = generateReportBtn?.textContent;
+  if (generateReportBtn) {
+    generateReportBtn.disabled = true;
+    generateReportBtn.innerHTML = '<span class="loading-inline"><span class="spinner-small"></span> Generating...</span>';
+  }
+  
   try {
-    showLoading('dateRangeReport');
+    showLoading('dateRangeReport', 'Generating report...');
     const response = await apiGet('getReport', {
       class: reportClass,
       startDate: startDate,
@@ -483,6 +491,7 @@ async function generateDateRangeReport() {
     
     if (response.success && response.data) {
       renderDateRangeReport(response.data);
+      showMessage('Report generated successfully', 'success');
     } else {
       showMessage(response.error || 'Failed to generate report', 'error');
     }
@@ -491,6 +500,10 @@ async function generateDateRangeReport() {
     showMessage('Error generating report', 'error');
   } finally {
     hideLoading('dateRangeReport');
+    if (generateReportBtn) {
+      generateReportBtn.disabled = false;
+      generateReportBtn.textContent = originalBtnText || 'Generate Report';
+    }
   }
 }
 
