@@ -55,15 +55,21 @@ function setupHeader() {
  */
 async function loadSchoolInfo() {
   try {
+    console.log('Loading school info...');
     const response = await apiGet('getSchool');
+    console.log('School info response:', response);
     if (response.success && response.data) {
       const schoolNameEl = document.getElementById('schoolName');
       if (schoolNameEl) {
         schoolNameEl.textContent = response.data.schoolName;
       }
+    } else {
+      console.error('Failed to load school info:', response);
+      showMessage('Failed to load school information', 'error');
     }
   } catch (error) {
     console.error('Load school error:', error);
+    showMessage('Error loading school information: ' + error.message, 'error');
   }
 }
 
@@ -103,19 +109,23 @@ async function loadStudents() {
   
   try {
     showLoading('studentsList');
+    console.log('Loading students for class:', selectedClass);
     const response = await apiGet('getStudents', {
       class: selectedClass
     });
+    console.log('Students response:', response);
     
     if (response.success) {
       students = response.data || [];
+      console.log('Loaded students:', students.length);
       renderStudents();
     } else {
-      showMessage('Failed to load students', 'error');
+      console.error('Failed to load students:', response);
+      showMessage('Failed to load students: ' + (response.error || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Load students error:', error);
-    showMessage('Error loading students', 'error');
+    showMessage('Error loading students: ' + error.message, 'error');
   } finally {
     hideLoading('studentsList');
   }

@@ -128,18 +128,39 @@ function logout() {
 async function apiRequest(endpoint, options = {}) {
   try {
     const url = `${API_URL}${endpoint}`;
+    console.log('API Request:', url, options);
+    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include'
+      credentials: 'include',
+      mode: 'cors' // Explicitly set CORS mode
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    console.log('API Response status:', response.status, response.statusText);
+    
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error(`Expected JSON but got: ${contentType}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('API Response data:', data);
+    
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+    
+    return data;
   } catch (error) {
     console.error('API request error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      endpoint: endpoint
+    });
     throw error;
   }
 }

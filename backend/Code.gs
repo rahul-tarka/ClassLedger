@@ -724,13 +724,26 @@ function exportToDrive(date) {
 function doGet(e) {
   try {
     const action = e.parameter.action;
-    const user = getUserFromRequest();
     
-    if (!user && action !== 'auth') {
-      return ContentService.createTextOutput(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      })).setMimeType(ContentService.MimeType.JSON);
+    // For 'auth' action, try to get user but don't fail if not authenticated yet
+    // This allows OAuth to trigger automatically
+    let user = null;
+    if (action === 'auth') {
+      try {
+        user = getUserFromRequest();
+      } catch (e) {
+        // User not authenticated yet - OAuth will trigger automatically
+        // Don't return error, let the auth flow continue
+        user = null;
+      }
+    } else {
+      user = getUserFromRequest();
+      if (!user) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
     }
     
     switch (action) {
@@ -741,6 +754,15 @@ function doGet(e) {
         // - Who has access: Anyone (or Anyone with Google account)
         const redirectUrl = e.parameter.redirect;
         if (redirectUrl) {
+          // Try to get user again (in case OAuth just completed)
+          if (!user) {
+            try {
+              user = getUserFromRequest();
+            } catch (e) {
+              user = null;
+            }
+          }
+          
           if (user) {
             // User is authenticated - redirect back to frontend with user data
             const userData = encodeURIComponent(JSON.stringify(user));
