@@ -1015,6 +1015,60 @@ window.location.replace('${errorUrl}');
           success: true,
           data: classes
         });
+      
+      case 'getAllStudents':
+        // Get all students for admin management
+        if (user.role !== 'admin') {
+          return createJsonResponse({ success: false, error: 'Admin access required' });
+        }
+        const allStudents = getAllStudentsForSchool(e.parameter.schoolId || user.schoolId);
+        return createJsonResponse({
+          success: true,
+          data: allStudents
+        });
+      
+      case 'getAllTeachers':
+        // Get all teachers for admin management
+        if (user.role !== 'admin') {
+          return createJsonResponse({ success: false, error: 'Admin access required' });
+        }
+        const allTeachers = getAllTeachersForSchool(e.parameter.schoolId || user.schoolId);
+        return createJsonResponse({
+          success: true,
+          data: allTeachers
+        });
+      
+      case 'getStudent':
+        // Get single student details
+        const student = getStudentById(e.parameter.studentId);
+        return createJsonResponse({
+          success: true,
+          data: student
+        });
+      
+      case 'getStudentAttendanceSummary':
+        // Get student attendance summary for certificate
+        const summary = getStudentAttendanceSummary(e.parameter.studentId, e.parameter.schoolId);
+        return createJsonResponse({
+          success: true,
+          data: summary
+        });
+      
+      case 'getSystemSettings':
+        // Get system settings
+        const settings = getSystemSettings();
+        return createJsonResponse({
+          success: true,
+          data: settings
+        });
+      
+      case 'getCorrectionRequests':
+        // Get correction requests for a student
+        const requests = getCorrectionRequests(e.parameter.studentId);
+        return createJsonResponse({
+          success: true,
+          data: requests
+        });
         
       case 'getSchool':
         const school = getSchool(user.schoolId);
@@ -1752,3 +1806,428 @@ function addNewClass(schoolId, className, section, capacity) {
   return { success: true, message: 'Class addition stub - implement class creation' };
 }
 
+
+// ============================================
+// ADMIN MANAGEMENT FUNCTIONS
+// ============================================
+
+/**
+ * Get all teachers for a school
+ */
+function getAllTeachersForSchool(schoolId) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.teacherMaster, 'Teacher_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    const teachers = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowSchoolId = String(row[1]);
+      
+      if (rowSchoolId === schoolId) {
+        teachers.push({
+          email: String(row[0]),
+          name: String(row[2]),
+          role: String(row[3]),
+          classAssigned: row[4] ? String(row[4]).split(',').map(c => c.trim()) : [],
+          active: row[5] === true || String(row[5]).toLowerCase() === 'true'
+        });
+      }
+    }
+    return teachers;
+  } catch (e) {
+    console.error('Get all teachers error:', e);
+    return [];
+  }
+}
+
+/**
+ * Get student by ID
+ */
+function getStudentById(studentId) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.studentMaster, 'Student_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === studentId) {
+        return {
+          studentId: String(data[i][0]),
+          schoolId: String(data[i][1]),
+          name: String(data[i][2]),
+          class: String(data[i][3]),
+          section: String(data[i][4]),
+          roll: Number(data[i][5]) || 0,
+          parentMobile: String(data[i][6]),
+          active: data[i][7] === true || String(data[i][7]).toLowerCase() === 'true',
+          whatsappAlertEnabled: data[i].length > 8 ? (data[i][8] === true || String(data[i][8]).toLowerCase() === 'true') : false
+        };
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('Get student error:', e);
+    return null;
+  }
+}
+
+/**
+ * Add student to system
+ */
+function addStudentToSystem(studentData, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.studentMaster, 'Student_Master');
+    
+    // Generate student ID if not provided
+    const studentId = studentData.studentId || `STU${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    
+    // Add row
+    sheet.appendRow([
+      studentId,
+      studentData.schoolId || user.schoolId,
+      studentData.name,
+      studentData.class,
+      studentData.section || 'A',
+      studentData.roll || 1,
+      studentData.parentMobile || '',
+      studentData.active !== false, // Default to true
+      studentData.whatsappAlertEnabled === true,
+      studentData.parentName || ''
+    ]);
+    
+    logAudit(user.email, 'ADD_STUDENT', { studentId: studentId, name: studentData.name });
+    
+    return { success: true, message: 'Student added successfully', studentId: studentId };
+  } catch (e) {
+    console.error('Add student error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Update student in system
+ */
+function updateStudentInSystem(studentId, studentData, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.studentMaster, 'Student_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === studentId) {
+        // Update row
+        if (studentData.name) sheet.getRange(i + 1, 3).setValue(studentData.name);
+        if (studentData.class) sheet.getRange(i + 1, 4).setValue(studentData.class);
+        if (studentData.section) sheet.getRange(i + 1, 5).setValue(studentData.section);
+        if (studentData.roll !== undefined) sheet.getRange(i + 1, 6).setValue(studentData.roll);
+        if (studentData.parentMobile) sheet.getRange(i + 1, 7).setValue(studentData.parentMobile);
+        if (studentData.active !== undefined) sheet.getRange(i + 1, 8).setValue(studentData.active === true || studentData.active === 'true');
+        if (studentData.whatsappAlertEnabled !== undefined) {
+          if (sheet.getLastColumn() < 9) {
+            sheet.getRange(1, 9).setValue('whatsapp_alert_enabled');
+          }
+          sheet.getRange(i + 1, 9).setValue(studentData.whatsappAlertEnabled === true || studentData.whatsappAlertEnabled === 'true');
+        }
+        
+        logAudit(user.email, 'UPDATE_STUDENT', { studentId: studentId, changes: studentData });
+        
+        return { success: true, message: 'Student updated successfully' };
+      }
+    }
+    
+    return { success: false, error: 'Student not found' };
+  } catch (e) {
+    console.error('Update student error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Delete student from system (soft delete - mark as inactive)
+ */
+function deleteStudentFromSystem(studentId, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.studentMaster, 'Student_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === studentId) {
+        // Soft delete - mark as inactive
+        sheet.getRange(i + 1, 8).setValue(false);
+        
+        logAudit(user.email, 'DELETE_STUDENT', { studentId: studentId });
+        
+        return { success: true, message: 'Student deleted successfully' };
+      }
+    }
+    
+    return { success: false, error: 'Student not found' };
+  } catch (e) {
+    console.error('Delete student error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Add teacher to system
+ */
+function addTeacherToSystem(teacherData, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.teacherMaster, 'Teacher_Master');
+    
+    // Check if teacher already exists
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === teacherData.email) {
+        return { success: false, error: 'Teacher already exists' };
+      }
+    }
+    
+    // Add row
+    sheet.appendRow([
+      teacherData.email,
+      teacherData.schoolId || user.schoolId,
+      teacherData.name,
+      teacherData.role || 'teacher',
+      (teacherData.classAssigned || []).join(','),
+      true // active
+    ]);
+    
+    logAudit(user.email, 'ADD_TEACHER', { email: teacherData.email, name: teacherData.name });
+    
+    return { success: true, message: 'Teacher added successfully' };
+  } catch (e) {
+    console.error('Add teacher error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Update teacher in system
+ */
+function updateTeacherInSystem(email, teacherData, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.teacherMaster, 'Teacher_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === email) {
+        // Update row
+        if (teacherData.name) sheet.getRange(i + 1, 3).setValue(teacherData.name);
+        if (teacherData.role) sheet.getRange(i + 1, 4).setValue(teacherData.role);
+        if (teacherData.classAssigned) sheet.getRange(i + 1, 5).setValue(teacherData.classAssigned.join(','));
+        if (teacherData.active !== undefined) sheet.getRange(i + 1, 6).setValue(teacherData.active === true || teacherData.active === 'true');
+        
+        logAudit(user.email, 'UPDATE_TEACHER', { email: email, changes: teacherData });
+        
+        return { success: true, message: 'Teacher updated successfully' };
+      }
+    }
+    
+    return { success: false, error: 'Teacher not found' };
+  } catch (e) {
+    console.error('Update teacher error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Delete teacher from system (soft delete - mark as inactive)
+ */
+function deleteTeacherFromSystem(email, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.teacherMaster, 'Teacher_Master');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === email) {
+        // Soft delete - mark as inactive
+        sheet.getRange(i + 1, 6).setValue(false);
+        
+        logAudit(user.email, 'DELETE_TEACHER', { email: email });
+        
+        return { success: true, message: 'Teacher deleted successfully' };
+      }
+    }
+    
+    return { success: false, error: 'Teacher not found' };
+  } catch (e) {
+    console.error('Delete teacher error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Get system settings
+ */
+function getSystemSettings() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    return {
+      checkInStart: props.getProperty('CHECK_IN_START') || '07:00',
+      checkInEnd: props.getProperty('CHECK_IN_END') || '10:30',
+      checkOutStart: props.getProperty('CHECK_OUT_START') || '12:30',
+      checkOutEnd: props.getProperty('CHECK_OUT_END') || '15:30',
+      lateThreshold: props.getProperty('LATE_THRESHOLD') || '09:15',
+      editWindow: parseInt(props.getProperty('EDIT_WINDOW') || '15')
+    };
+  } catch (e) {
+    console.error('Get system settings error:', e);
+    return {
+      checkInStart: '07:00',
+      checkInEnd: '10:30',
+      checkOutStart: '12:30',
+      checkOutEnd: '15:30',
+      lateThreshold: '09:15',
+      editWindow: 15
+    };
+  }
+}
+
+/**
+ * Save system settings
+ */
+function saveSystemSettingsToStorage(settings, user) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    
+    if (settings.checkInStart) props.setProperty('CHECK_IN_START', settings.checkInStart);
+    if (settings.checkInEnd) props.setProperty('CHECK_IN_END', settings.checkInEnd);
+    if (settings.checkOutStart) props.setProperty('CHECK_OUT_START', settings.checkOutStart);
+    if (settings.checkOutEnd) props.setProperty('CHECK_OUT_END', settings.checkOutEnd);
+    if (settings.lateThreshold) props.setProperty('LATE_THRESHOLD', settings.lateThreshold);
+    if (settings.editWindow) props.setProperty('EDIT_WINDOW', settings.editWindow.toString());
+    
+    logAudit(user.email, 'UPDATE_SYSTEM_SETTINGS', settings);
+    
+    return { success: true, message: 'Settings saved successfully' };
+  } catch (e) {
+    console.error('Save system settings error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Get student attendance summary
+ */
+function getStudentAttendanceSummary(studentId, schoolId) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.attendanceLog, 'Attendance_Log');
+    const data = sheet.getDataRange().getValues();
+    
+    let totalDays = 0;
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    const dates = new Set();
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rowStudentId = String(row[4]);
+      const rowSchoolId = String(row[5]);
+      const rowDate = String(row[2]);
+      const rowStatus = String(row[7]);
+      const rowType = String(row[8]);
+      
+      if (rowStudentId === studentId && rowSchoolId === schoolId && rowType === 'CHECK_IN') {
+        dates.add(rowDate);
+        totalDays++;
+        
+        if (rowStatus === 'P') present++;
+        else if (rowStatus === 'A') absent++;
+        else if (rowStatus === 'L') late++;
+      }
+    }
+    
+    const attendancePercentage = totalDays > 0 ? ((present / totalDays) * 100).toFixed(2) : 0;
+    
+    return {
+      totalDays: totalDays,
+      present: present,
+      absent: absent,
+      late: late,
+      attendancePercentage: parseFloat(attendancePercentage)
+    };
+  } catch (e) {
+    console.error('Get student attendance summary error:', e);
+    return {
+      totalDays: 0,
+      present: 0,
+      absent: 0,
+      late: 0,
+      attendancePercentage: 0
+    };
+  }
+}
+
+/**
+ * Get correction requests (STUB - can be implemented with a new sheet)
+ */
+function getCorrectionRequests(studentId) {
+  // STUB - Return empty array for now
+  // Can be implemented with a Correction_Requests sheet
+  return [];
+}
+
+/**
+ * Approve correction request (STUB)
+ */
+function approveCorrectionRequestById(requestId, user) {
+  // STUB - Implement with Correction_Requests sheet
+  logAudit(user.email, 'APPROVE_CORRECTION_REQUEST', { requestId: requestId });
+  return { success: true, message: 'Correction request approved' };
+}
+
+/**
+ * Reject correction request (STUB)
+ */
+function rejectCorrectionRequestById(requestId, user) {
+  // STUB - Implement with Correction_Requests sheet
+  logAudit(user.email, 'REJECT_CORRECTION_REQUEST', { requestId: requestId });
+  return { success: true, message: 'Correction request rejected' };
+}
+
+/**
+ * Edit attendance (Admin - no time restriction)
+ */
+function editAttendanceAdmin(logId, status, remark, user) {
+  try {
+    const sheetIds = getSheetIds();
+    const sheet = getSheet(sheetIds.attendanceLog, 'Attendance_Log');
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === logId) {
+        // Update status
+        sheet.getRange(i + 1, 8).setValue(status);
+        if (remark) {
+          if (sheet.getLastColumn() < 11) {
+            sheet.getRange(1, 11).setValue('remark');
+          }
+          sheet.getRange(i + 1, 11).setValue(remark);
+        }
+        
+        logAudit(user.email, 'EDIT_ATTENDANCE_ADMIN', {
+          logId: logId,
+          status: status,
+          remark: remark
+        });
+        
+        return { success: true, message: 'Attendance updated successfully' };
+      }
+    }
+    
+    return { success: false, error: 'Attendance record not found' };
+  } catch (e) {
+    console.error('Edit attendance admin error:', e);
+    return { success: false, error: e.toString() };
+  }
+}
