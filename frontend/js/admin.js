@@ -539,12 +539,42 @@ function renderDateRangeReport(report) {
   const container = document.getElementById('dateRangeReport');
   if (!container) return;
   
+  // Store report data for export
+  window.currentReportData = report;
+  
   const { summary, dailyData } = report;
+  
+  // Generate analytics if available
+  let analyticsHtml = '';
+  if (typeof renderAnalytics !== 'undefined') {
+    const analytics = renderAnalytics(dailyData, []);
+    analyticsHtml = `
+      <div style="margin-top: 2rem;">
+        <h4>Analytics</h4>
+        ${analytics.trends.direction ? `
+          <p class="${analytics.trends.direction === 'up' ? 'trend-up' : analytics.trends.direction === 'down' ? 'trend-down' : 'trend-neutral'}">
+            Trend: ${analytics.trends.direction === 'up' ? '↑' : analytics.trends.direction === 'down' ? '↓' : '→'} 
+            ${analytics.trends.change ? '(' + analytics.trends.change + '%)' : ''}
+          </p>
+        ` : ''}
+        ${analytics.anomalies.length > 0 ? `
+          <div style="margin-top: 1rem;">
+            <strong>Anomalies:</strong>
+            ${analytics.anomalies.map(a => `<div class="anomaly-alert">${a.message}</div>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
   
   container.innerHTML = `
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Report Summary</h3>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" onclick="exportReportToPDF()">Export PDF</button>
+          <button class="btn btn-secondary" onclick="exportReportToExcel()">Export Excel</button>
+        </div>
       </div>
       <div class="summary mb-3">
         <div class="summary-card">
@@ -566,6 +596,7 @@ function renderDateRangeReport(report) {
       </div>
       
       <h4 class="mb-2">Daily Breakdown</h4>
+      ${analyticsHtml}
       <table class="table">
         <thead>
           <tr>
@@ -616,24 +647,47 @@ function hideLoading(elementId) {
 }
 
 function showMessage(message, type = 'info') {
-  const alert = document.createElement('div');
-  alert.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
-  alert.textContent = message;
-  
-  const container = document.querySelector('.container');
-  if (container) {
-    container.insertBefore(alert, container.firstChild);
+  // Use toast if available, otherwise fallback to alert
+  if (typeof showToast !== 'undefined') {
+    showToast(message, type);
+  } else {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+    alert.textContent = message;
     
-    setTimeout(() => {
-      alert.remove();
-    }, 5000);
+    const container = document.querySelector('.container');
+    if (container) {
+      container.insertBefore(alert, container.firstChild);
+      
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
   }
 }
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initAdminDashboard);
+  document.addEventListener('DOMContentLoaded', () => {
+    initAdminDashboard();
+    setupAdminRealtime();
+    setupKeyboardShortcuts({
+      'ctrl+r': () => manualRefresh(),
+      'ctrl+e': () => {
+        const exportBtn = document.getElementById('exportReportBtn');
+        if (exportBtn) exportBtn.click();
+      }
+    });
+  });
 } else {
   initAdminDashboard();
+  setupAdminRealtime();
+  setupKeyboardShortcuts({
+    'ctrl+r': () => manualRefresh(),
+    'ctrl+e': () => {
+      const exportBtn = document.getElementById('exportReportBtn');
+      if (exportBtn) exportBtn.click();
+    }
+  });
 }
 

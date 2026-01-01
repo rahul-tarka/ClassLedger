@@ -1165,6 +1165,18 @@ function doPost(e) {
         const updateResult = updateWhatsAppAlertSetting(data.studentId, data.enabled, e);
         return createJsonResponse(updateResult);
         
+      case 'addHoliday':
+        const addHolidayResult = addHoliday(data.date, data.name, data.type || 'general');
+        return createJsonResponse(addHolidayResult);
+        
+      case 'removeHoliday':
+        const removeHolidayResult = removeHoliday(data.date);
+        return createJsonResponse(removeHolidayResult);
+        
+      case 'bulkImportStudents':
+        const bulkImportResult = bulkImportStudents(data.students || [], e);
+        return createJsonResponse(bulkImportResult);
+        
       default:
         return createJsonResponse({
           success: false,

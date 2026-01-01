@@ -304,6 +304,13 @@ function setupReportRange() {
   }
 }
 
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPrincipalDashboard);
+} else {
+  initPrincipalDashboard();
+}
+
 /**
  * Disable all edit buttons (read-only mode)
  */

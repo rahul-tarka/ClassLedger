@@ -306,7 +306,7 @@ async function markAttendance(studentId, status) {
     }
   } catch (error) {
     console.error('Mark attendance error:', error);
-    showMessage('Error marking attendance', 'error');
+    showToast('Error marking attendance', 'error');
   } finally {
     hideLoading('studentsList');
   }
@@ -329,14 +329,14 @@ async function editAttendance(logId, newStatus) {
     });
     
     if (response.success) {
-      showMessage('Attendance updated successfully', 'success');
+      showToast('Attendance updated successfully', 'success');
       await loadTodayAttendance();
     } else {
-      showMessage(response.error || 'Failed to update attendance', 'error');
+      showToast(response.error || 'Failed to update attendance', 'error');
     }
   } catch (error) {
     console.error('Edit attendance error:', error);
-    showMessage('Error updating attendance', 'error');
+    showToast('Error updating attendance', 'error');
   }
 }
 
@@ -404,14 +404,16 @@ function submitAttendance() {
   const total = students.length;
   
   if (marked === 0) {
-    showMessage('Please mark attendance for at least one student', 'error');
+    showToast('Please mark attendance for at least one student', 'error');
     return;
   }
   
-  if (confirm(`Submit attendance for ${marked} out of ${total} students?`)) {
-    showMessage('Attendance submitted successfully', 'success');
-    // Attendance is already saved, just show confirmation
-  }
+  confirmDialog(`Submit attendance for ${marked} out of ${total} students?`, 'Confirm Submission').then(confirmed => {
+    if (confirmed) {
+      showToast('Attendance submitted successfully', 'success');
+      // Attendance is already saved, just show confirmation
+    }
+  });
 }
 
 /**
@@ -477,8 +479,30 @@ function getAttendanceDataForAutoSave() {
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initTeacherDashboard);
+  document.addEventListener('DOMContentLoaded', () => {
+    initTeacherDashboard();
+    
+    // Setup real-time updates cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (typeof realTimeUpdates !== 'undefined') {
+        realTimeUpdates.stopAll();
+      }
+      if (typeof autoSave !== 'undefined') {
+        autoSave.stopAutoSave();
+      }
+    });
+  });
 } else {
   initTeacherDashboard();
+  
+  // Setup real-time updates cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (typeof realTimeUpdates !== 'undefined') {
+      realTimeUpdates.stopAll();
+    }
+    if (typeof autoSave !== 'undefined') {
+      autoSave.stopAutoSave();
+    }
+  });
 }
 
