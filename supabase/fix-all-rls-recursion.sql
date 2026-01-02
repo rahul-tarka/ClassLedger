@@ -81,12 +81,21 @@ CREATE POLICY "Users can view their school" ON schools
   USING (
     is_product_admin(auth.jwt() ->> 'email')
     OR school_id = get_user_school_id()
+    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
   );
 
 DROP POLICY IF EXISTS "Product admins can manage schools" ON schools;
 CREATE POLICY "Product admins can manage schools" ON schools
   FOR ALL
   USING (is_product_admin(auth.jwt() ->> 'email'));
+
+-- Allow school creation during onboarding (when no schools exist)
+CREATE POLICY "Allow onboarding school creation" ON schools
+  FOR INSERT
+  WITH CHECK (
+    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist
+    OR is_product_admin(auth.jwt() ->> 'email') -- Or if product admin
+  );
 
 -- Step 4: Fix teachers policies
 -- ============================================
@@ -96,7 +105,8 @@ CREATE POLICY "Users can view teachers in their school" ON teachers
   USING (
     email = auth.jwt() ->> 'email'
     OR school_id = get_user_school_id()
-    OR NOT EXISTS (SELECT 1 FROM teachers)
+    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow viewing during onboarding
+    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
   );
 
 DROP POLICY IF EXISTS "Admin can manage teachers" ON teachers;
@@ -104,7 +114,17 @@ CREATE POLICY "Admin can manage teachers" ON teachers
   FOR ALL
   USING (
     is_admin()
-    OR NOT EXISTS (SELECT 1 FROM teachers)
+    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first admin creation
+    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow during onboarding
+  );
+
+-- Allow teacher creation during onboarding
+CREATE POLICY "Allow onboarding teacher creation" ON teachers
+  FOR INSERT
+  WITH CHECK (
+    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist (onboarding)
+    OR is_admin() -- Or if admin
+    OR NOT EXISTS (SELECT 1 FROM teachers) -- Or if first teacher
   );
 
 -- Step 5: Fix students policies
