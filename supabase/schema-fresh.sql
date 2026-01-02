@@ -1,0 +1,432 @@
+-- ClassLedger Database Schema for Supabase (PostgreSQL)
+-- FRESH INSTALL - Drops all existing tables and creates new ones
+-- Run this in Supabase SQL Editor for a clean setup
+
+-- ============================================
+-- DROP ALL EXISTING TABLES (Clean Slate)
+-- ============================================
+-- Drop in reverse order of dependencies
+DROP TABLE IF EXISTS correction_requests CASCADE;
+DROP TABLE IF EXISTS whatsapp_log CASCADE;
+DROP TABLE IF EXISTS audit_log CASCADE;
+DROP TABLE IF EXISTS attendance_log CASCADE;
+DROP TABLE IF EXISTS students CASCADE;
+DROP TABLE IF EXISTS teachers CASCADE;
+DROP TABLE IF EXISTS schools CASCADE;
+
+-- Drop functions if they exist
+DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+DROP FUNCTION IF EXISTS get_user_school_id() CASCADE;
+DROP FUNCTION IF EXISTS is_admin() CASCADE;
+DROP FUNCTION IF EXISTS get_student_attendance_summary(VARCHAR, VARCHAR) CASCADE;
+
+-- Drop extensions if needed (optional)
+-- DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE;
+
+-- ============================================
+-- CREATE EXTENSIONS
+-- ============================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- SCHOOLS TABLE
+-- ============================================
+CREATE TABLE schools (
+  school_id VARCHAR(50) PRIMARY KEY,
+  school_name VARCHAR(255) NOT NULL,
+  address TEXT,
+  phone VARCHAR(20),
+  email VARCHAR(255),
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- TEACHERS TABLE
+-- ============================================
+CREATE TABLE teachers (
+  email VARCHAR(255) PRIMARY KEY,
+  school_id VARCHAR(50) NOT NULL REFERENCES schools(school_id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('teacher', 'admin', 'principal')),
+  class_assigned TEXT[], -- Array of class names
+  phone VARCHAR(20),
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- STUDENTS TABLE
+-- ============================================
+CREATE TABLE students (
+  student_id VARCHAR(50) PRIMARY KEY,
+  school_id VARCHAR(50) NOT NULL REFERENCES schools(school_id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  class VARCHAR(50) NOT NULL,
+  section VARCHAR(10) NOT NULL,
+  roll INTEGER NOT NULL,
+  parent_mobile VARCHAR(20),
+  parent_name VARCHAR(255),
+  active BOOLEAN DEFAULT true,
+  whatsapp_alert_enabled BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(school_id, class, section, roll)
+);
+
+-- ============================================
+-- ATTENDANCE LOG TABLE
+-- ============================================
+CREATE TABLE attendance_log (
+  log_id VARCHAR(100) PRIMARY KEY,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  student_id VARCHAR(50) NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  school_id VARCHAR(50) NOT NULL REFERENCES schools(school_id) ON DELETE CASCADE,
+  class VARCHAR(50) NOT NULL,
+  status VARCHAR(1) CHECK (status IS NULL OR status IN ('P', 'A', 'L')),
+  type VARCHAR(20) NOT NULL CHECK (type IN ('CHECK_IN', 'CHECK_OUT')),
+  teacher_email VARCHAR(255) REFERENCES teachers(email) ON DELETE SET NULL,
+  remark TEXT,
+  day VARCHAR(20),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- AUDIT LOG TABLE
+-- ============================================
+CREATE TABLE audit_log (
+  id SERIAL PRIMARY KEY,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  user_email VARCHAR(255) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  details JSONB,
+  ip_address VARCHAR(50),
+  user_agent TEXT
+);
+
+-- ============================================
+-- WHATSAPP LOG TABLE
+-- ============================================
+CREATE TABLE whatsapp_log (
+  id SERIAL PRIMARY KEY,
+  student_id VARCHAR(50) REFERENCES students(student_id) ON DELETE CASCADE,
+  parent_mobile VARCHAR(20) NOT NULL,
+  date DATE NOT NULL,
+  status VARCHAR(50) NOT NULL, -- 'sent', 'failed', 'skipped'
+  response JSONB,
+  error_message TEXT,
+  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- CORRECTION REQUESTS TABLE
+-- ============================================
+CREATE TABLE correction_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id VARCHAR(50) NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  current_status VARCHAR(1) NOT NULL,
+  requested_status VARCHAR(1) NOT NULL,
+  reason TEXT,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  requested_by VARCHAR(255),
+  reviewed_by VARCHAR(255) REFERENCES teachers(email) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- INDEXES for Performance
+-- ============================================
+
+-- Schools indexes
+CREATE INDEX idx_schools_active ON schools(active) WHERE active = true;
+
+-- Teachers indexes
+CREATE INDEX idx_teachers_school_id ON teachers(school_id);
+CREATE INDEX idx_teachers_email ON teachers(email);
+CREATE INDEX idx_teachers_active ON teachers(active) WHERE active = true;
+CREATE INDEX idx_teachers_role ON teachers(role);
+
+-- Students indexes
+CREATE INDEX idx_students_school_id ON students(school_id);
+CREATE INDEX idx_students_class ON students(school_id, class);
+CREATE INDEX idx_students_active ON students(active) WHERE active = true;
+CREATE INDEX idx_students_school_class_section ON students(school_id, class, section);
+
+-- Attendance log indexes
+CREATE INDEX idx_attendance_date ON attendance_log(date);
+CREATE INDEX idx_attendance_student_id ON attendance_log(student_id);
+CREATE INDEX idx_attendance_school_class_date ON attendance_log(school_id, class, date);
+CREATE INDEX idx_attendance_student_date ON attendance_log(student_id, date);
+CREATE INDEX idx_attendance_type ON attendance_log(type);
+
+-- Audit log indexes
+CREATE INDEX idx_audit_user_email ON audit_log(user_email);
+CREATE INDEX idx_audit_timestamp ON audit_log(timestamp);
+CREATE INDEX idx_audit_action ON audit_log(action);
+
+-- WhatsApp log indexes
+CREATE INDEX idx_whatsapp_student_date ON whatsapp_log(student_id, date);
+CREATE INDEX idx_whatsapp_date ON whatsapp_log(date);
+CREATE INDEX idx_whatsapp_status ON whatsapp_log(status);
+
+-- Correction requests indexes
+CREATE INDEX idx_correction_student_id ON correction_requests(student_id);
+CREATE INDEX idx_correction_status ON correction_requests(status);
+CREATE INDEX idx_correction_date ON correction_requests(date);
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+
+-- Enable RLS on all tables
+ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE correction_requests ENABLE ROW LEVEL SECURITY;
+
+-- Schools: Users can only see their school
+CREATE POLICY "Users can view their school" ON schools
+  FOR SELECT
+  USING (
+    school_id IN (
+      SELECT school_id FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+  );
+
+-- Schools: Admin can insert/update schools (for onboarding)
+CREATE POLICY "Admin can manage schools" ON schools
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow first school creation
+  );
+
+-- Teachers: Users can see teachers in their school
+CREATE POLICY "Users can view teachers in their school" ON teachers
+  FOR SELECT
+  USING (
+    school_id IN (
+      SELECT school_id FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first teacher creation
+  );
+
+-- Teachers: Admin can manage teachers
+CREATE POLICY "Admin can manage teachers" ON teachers
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first admin creation
+  );
+
+-- Students: Teachers can see students in their classes
+CREATE POLICY "Teachers can view students in their classes" ON students
+  FOR SELECT
+  USING (
+    school_id IN (
+      SELECT school_id FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+    AND (
+      EXISTS (
+        SELECT 1 FROM teachers t
+        WHERE t.email = auth.jwt() ->> 'email'
+        AND students.class = ANY(t.class_assigned)
+      )
+      OR EXISTS (
+        SELECT 1 FROM teachers 
+        WHERE email = auth.jwt() ->> 'email' 
+        AND role IN ('admin', 'principal')
+      )
+    )
+  );
+
+-- Admin can insert/update/delete students
+CREATE POLICY "Admin can manage students" ON students
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+  );
+
+-- Attendance: Teachers can insert attendance for their classes
+CREATE POLICY "Teachers can insert attendance" ON attendance_log
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM teachers t
+      WHERE t.email = auth.jwt() ->> 'email' 
+      AND t.active = true
+      AND (
+        attendance_log.class = ANY(t.class_assigned)
+        OR t.role IN ('admin', 'principal')
+      )
+    )
+  );
+
+-- Attendance: Users can view attendance for their school/classes
+CREATE POLICY "Users can view attendance" ON attendance_log
+  FOR SELECT
+  USING (
+    school_id IN (
+      SELECT school_id FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+  );
+
+-- Admin can edit any attendance
+CREATE POLICY "Admin can edit attendance" ON attendance_log
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+  );
+
+-- Audit log: All authenticated users can insert
+CREATE POLICY "Authenticated users can log actions" ON audit_log
+  FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
+-- Audit log: Only admins can view
+CREATE POLICY "Admin can view audit log" ON audit_log
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+  );
+
+-- WhatsApp log: Admin can view
+CREATE POLICY "Admin can view WhatsApp log" ON whatsapp_log
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+  );
+
+-- Correction requests: Admin can view and manage
+CREATE POLICY "Admin can manage correction requests" ON correction_requests
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers 
+      WHERE email = auth.jwt() ->> 'email' 
+      AND role = 'admin' AND active = true
+    )
+  );
+
+-- ============================================
+-- FUNCTIONS & TRIGGERS
+-- ============================================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for updated_at
+CREATE TRIGGER update_schools_updated_at BEFORE UPDATE ON schools
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_teachers_updated_at BEFORE UPDATE ON teachers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- HELPER FUNCTIONS
+-- ============================================
+
+-- Function to get user's school_id
+CREATE OR REPLACE FUNCTION get_user_school_id()
+RETURNS VARCHAR(50) AS $$
+  SELECT school_id FROM teachers 
+  WHERE email = auth.jwt() ->> 'email' 
+  AND active = true 
+  LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if user is admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role = 'admin' 
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to get student attendance summary
+CREATE OR REPLACE FUNCTION get_student_attendance_summary(
+  p_student_id VARCHAR(50),
+  p_school_id VARCHAR(50)
+)
+RETURNS TABLE (
+  total_days BIGINT,
+  present BIGINT,
+  absent BIGINT,
+  late BIGINT,
+  attendance_percentage NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    COUNT(*)::BIGINT as total_days,
+    COUNT(*) FILTER (WHERE status = 'P')::BIGINT as present,
+    COUNT(*) FILTER (WHERE status = 'A')::BIGINT as absent,
+    COUNT(*) FILTER (WHERE status = 'L')::BIGINT as late,
+    ROUND(
+      (COUNT(*) FILTER (WHERE status = 'P')::NUMERIC / NULLIF(COUNT(*), 0)) * 100,
+      2
+    ) as attendance_percentage
+  FROM attendance_log
+  WHERE student_id = p_student_id
+    AND school_id = p_school_id
+    AND type = 'CHECK_IN';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- SUCCESS MESSAGE
+-- ============================================
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Schema created successfully! All tables, indexes, and policies are ready.';
+  RAISE NOTICE '📝 Next: Set up onboarding in your application.';
+END $$;
+

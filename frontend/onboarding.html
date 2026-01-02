@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassLedger - Setup Your School</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <style>
+        .onboarding-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .onboarding-step {
+            display: none;
+        }
+        .onboarding-step.active {
+            display: block;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        .step-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #666;
+        }
+        .step-dot.active {
+            background: #4CAF50;
+            color: white;
+        }
+        .step-dot.completed {
+            background: #2196F3;
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .btn-group button {
+            flex: 1;
+        }
+        .import-section {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .import-section.dragover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .csv-template-link {
+            color: #2196F3;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container">
+        <div class="logo-container" style="text-align: center; margin-bottom: 2rem;">
+            <img src="assets/logo.svg" alt="ClassLedger" style="height: 60px;">
+        </div>
+
+        <h1 style="text-align: center; margin-bottom: 2rem;">Welcome to ClassLedger</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 2rem;">Let's set up your school in a few simple steps</p>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-dot active" id="step1-dot">1</div>
+            <div class="step-dot" id="step2-dot">2</div>
+            <div class="step-dot" id="step3-dot">3</div>
+            <div class="step-dot" id="step4-dot">4</div>
+        </div>
+
+        <!-- Step 1: School & Admin Setup -->
+        <div class="onboarding-step active" id="step1">
+            <h2>Step 1: School Information</h2>
+            <form id="schoolForm">
+                <div class="form-group">
+                    <label for="schoolName">School Name *</label>
+                    <input type="text" id="schoolName" name="schoolName" required>
+                </div>
+                <div class="form-group">
+                    <label for="schoolAddress">Address</label>
+                    <textarea id="schoolAddress" name="schoolAddress" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="schoolPhone">Phone</label>
+                    <input type="tel" id="schoolPhone" name="schoolPhone">
+                </div>
+                <div class="form-group">
+                    <label for="schoolEmail">Email</label>
+                    <input type="email" id="schoolEmail" name="schoolEmail">
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Admin Account</h3>
+                <div class="form-group">
+                    <label for="adminName">Admin Name *</label>
+                    <input type="text" id="adminName" name="adminName" required>
+                </div>
+                <div class="form-group">
+                    <label for="adminEmail">Admin Email *</label>
+                    <input type="email" id="adminEmail" name="adminEmail" required>
+                    <small style="color: #666; display: block; margin-top: 0.5rem;">This will be used for Google Sign-In</small>
+                </div>
+                <div class="form-group">
+                    <label for="adminPhone">Admin Phone</label>
+                    <input type="tel" id="adminPhone" name="adminPhone">
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="skipOnboarding()">Skip for Now</button>
+                    <button type="submit" class="btn btn-primary">Next: Add Teachers</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 2: Add Teachers -->
+        <div class="onboarding-step" id="step2">
+            <h2>Step 2: Add Teachers</h2>
+            <p style="color: #666; margin-bottom: 1.5rem;">Add your teachers one by one, or import from CSV</p>
+
+            <!-- Manual Add Form -->
+            <div id="manualTeacherForm">
+                <form id="teacherForm">
+                    <div class="form-group">
+                        <label for="teacherName">Teacher Name *</label>
+                        <input type="text" id="teacherName" name="teacherName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherEmail">Email *</label>
+                        <input type="email" id="teacherEmail" name="teacherEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherRole">Role *</label>
+                        <select id="teacherRole" name="teacherRole" required>
+                            <option value="teacher">Teacher</option>
+                            <option value="principal">Principal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherClasses">Assigned Classes (comma-separated)</label>
+                        <input type="text" id="teacherClasses" name="teacherClasses" placeholder="e.g., Class 1, Class 2">
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">Leave empty if not assigned to specific classes</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherPhone">Phone</label>
+                        <input type="tel" id="teacherPhone" name="teacherPhone">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Teacher</button>
+                </form>
+            </div>
+
+            <!-- Import Section -->
+            <div class="import-section" id="teacherImportSection">
+                <h3>Or Import from CSV</h3>
+                <p>Download template: <a href="#" class="csv-template-link" onclick="downloadTeacherTemplate()">teachers_template.csv</a></p>
+                <div class="file-input-wrapper">
+                    <button class="btn btn-secondary">Choose CSV File</button>
+                    <input type="file" id="teacherCsvFile" accept=".csv" onchange="handleTeacherCsvImport(event)">
+                </div>
+                <p id="teacherImportStatus" style="margin-top: 1rem; color: #666;"></p>
+            </div>
+
+            <!-- Teachers List -->
+            <div id="teachersList" style="margin-top: 2rem;">
+                <h3>Added Teachers</h3>
+                <div id="teachersListContent"></div>
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" onclick="previousStep(2)">Previous</button>
+                <button type="button" class="btn btn-primary" onclick="nextStep(2, 3)">Next: Add Students</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Add Students -->
+        <div class="onboarding-step" id="step3">
+            <h2>Step 3: Add Students</h2>
+            <p style="color: #666; margin-bottom: 1.5rem;">Add students one by one, or import from CSV</p>
+
+            <!-- Manual Add Form -->
+            <div id="manualStudentForm">
+                <form id="studentForm">
+                    <div class="form-group">
+                        <label for="studentName">Student Name *</label>
+                        <input type="text" id="studentName" name="studentName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentClass">Class *</label>
+                        <input type="text" id="studentClass" name="studentClass" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentSection">Section *</label>
+                        <input type="text" id="studentSection" name="studentSection" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentRoll">Roll Number *</label>
+                        <input type="number" id="studentRoll" name="studentRoll" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="parentName">Parent Name</label>
+                        <input type="text" id="parentName" name="parentName">
+                    </div>
+                    <div class="form-group">
+                        <label for="parentMobile">Parent Mobile</label>
+                        <input type="tel" id="parentMobile" name="parentMobile">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="whatsappEnabled" name="whatsappEnabled">
+                            Enable WhatsApp Alerts
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Student</button>
+                </form>
+            </div>
+
+            <!-- Import Section -->
+            <div class="import-section" id="studentImportSection">
+                <h3>Or Import from CSV</h3>
+                <p>Download template: <a href="#" class="csv-template-link" onclick="downloadStudentTemplate()">students_template.csv</a></p>
+                <div class="file-input-wrapper">
+                    <button class="btn btn-secondary">Choose CSV File</button>
+                    <input type="file" id="studentCsvFile" accept=".csv" onchange="handleStudentCsvImport(event)">
+                </div>
+                <p id="studentImportStatus" style="margin-top: 1rem; color: #666;"></p>
+            </div>
+
+            <!-- Students List -->
+            <div id="studentsList" style="margin-top: 2rem;">
+                <h3>Added Students</h3>
+                <div id="studentsListContent"></div>
+            </div>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" onclick="previousStep(3)">Previous</button>
+                <button type="button" class="btn btn-primary" onclick="nextStep(3, 4)">Next: Complete Setup</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Complete -->
+        <div class="onboarding-step" id="step4">
+            <h2>🎉 Setup Complete!</h2>
+            <div style="text-align: center; padding: 2rem;">
+                <p style="font-size: 1.2rem; margin-bottom: 1rem;">Your school is ready to use ClassLedger!</p>
+                <p style="color: #666; margin-bottom: 2rem;">You can now start marking attendance and managing your school.</p>
+                <button class="btn btn-primary" onclick="completeOnboarding()">Go to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/supabase-config.js"></script>
+    <script src="js/onboarding.js"></script>
+</body>
+</html>
+
