@@ -118,8 +118,8 @@ CREATE POLICY "Users can view teachers in their school" ON teachers
   USING (
     email = auth.jwt() ->> 'email'
     OR school_id = get_user_school_id()
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow viewing during onboarding
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
+    OR NOT teachers_exist() -- Allow viewing during onboarding (using function to avoid recursion)
+    OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
   );
 
 DROP POLICY IF EXISTS "Admin can manage teachers" ON teachers;
@@ -127,17 +127,18 @@ CREATE POLICY "Admin can manage teachers" ON teachers
   FOR ALL
   USING (
     is_admin()
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first admin creation
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow during onboarding
+    OR NOT teachers_exist() -- Allow first admin creation (using function to avoid recursion)
+    OR NOT schools_exist() -- Allow during onboarding (using function to avoid recursion)
   );
 
 -- Allow teacher creation during onboarding
+DROP POLICY IF EXISTS "Allow onboarding teacher creation" ON teachers;
 CREATE POLICY "Allow onboarding teacher creation" ON teachers
   FOR INSERT
   WITH CHECK (
-    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist (onboarding)
+    NOT schools_exist() -- Only allow if no schools exist (onboarding, using function to avoid recursion)
     OR is_admin() -- Or if admin
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Or if first teacher
+    OR NOT teachers_exist() -- Or if first teacher (using function to avoid recursion)
   );
 
 -- Step 5: Fix students policies
