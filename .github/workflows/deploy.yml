@@ -34,6 +34,10 @@ jobs:
           cp -r frontend/* _site/
           # Create .nojekyll to prevent Jekyll processing
           touch _site/.nojekyll
+          # Verify index.html exists
+          ls -la _site/index.html || echo "ERROR: index.html not found!"
+          echo "Files in _site:"
+          ls -la _site/ | head -20
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
