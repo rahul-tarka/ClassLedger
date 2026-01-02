@@ -66,6 +66,18 @@ RETURNS TEXT[] AS $$
   LIMIT 1;
 $$ LANGUAGE sql SECURITY DEFINER;
 
+-- Function to check if any schools exist (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION schools_exist()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (SELECT 1 FROM schools);
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if any teachers exist (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION teachers_exist()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (SELECT 1 FROM teachers);
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- Step 2: Fix product_admins policies
 -- ============================================
 DROP POLICY IF EXISTS "Product admins can view all" ON product_admins;
@@ -81,7 +93,7 @@ CREATE POLICY "Users can view their school" ON schools
   USING (
     is_product_admin(auth.jwt() ->> 'email')
     OR school_id = get_user_school_id()
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
+    OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
   );
 
 DROP POLICY IF EXISTS "Product admins can manage schools" ON schools;
@@ -90,10 +102,11 @@ CREATE POLICY "Product admins can manage schools" ON schools
   USING (is_product_admin(auth.jwt() ->> 'email'));
 
 -- Allow school creation during onboarding (when no schools exist)
+DROP POLICY IF EXISTS "Allow onboarding school creation" ON schools;
 CREATE POLICY "Allow onboarding school creation" ON schools
   FOR INSERT
   WITH CHECK (
-    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist
+    NOT schools_exist() -- Only allow if no schools exist (using function to avoid recursion)
     OR is_product_admin(auth.jwt() ->> 'email') -- Or if product admin
   );
 

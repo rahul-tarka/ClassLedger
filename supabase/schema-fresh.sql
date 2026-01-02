@@ -318,7 +318,7 @@ CREATE POLICY "Users can view their school" ON schools
   USING (
     is_product_admin(auth.jwt() ->> 'email')
     OR school_id = get_user_school_id()
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
+    OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
   );
 
 -- Schools: Product admins can manage all schools
@@ -332,7 +332,7 @@ CREATE POLICY "Product admins can manage schools" ON schools
 CREATE POLICY "Allow onboarding school creation" ON schools
   FOR INSERT
   WITH CHECK (
-    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist
+    NOT schools_exist() -- Only allow if no schools exist (using function to avoid recursion)
     OR is_product_admin(auth.jwt() ->> 'email') -- Or if product admin
   );
 
@@ -343,8 +343,8 @@ CREATE POLICY "Users can view teachers in their school" ON teachers
   USING (
     email = auth.jwt() ->> 'email'  -- Users can see their own record
     OR school_id = get_user_school_id()  -- Users can see teachers in their school
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first teacher creation
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow viewing during onboarding
+    OR NOT teachers_exist() -- Allow first teacher creation (using function to avoid recursion)
+    OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
   );
 
 -- Teachers: Admin can manage teachers
@@ -353,17 +353,17 @@ CREATE POLICY "Admin can manage teachers" ON teachers
   FOR ALL
   USING (
     is_admin()  -- Use existing SECURITY DEFINER function
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first admin creation
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow during onboarding
+    OR NOT teachers_exist() -- Allow first admin creation (using function to avoid recursion)
+    OR NOT schools_exist() -- Allow during onboarding (using function to avoid recursion)
   );
 
 -- Allow teacher creation during onboarding
 CREATE POLICY "Allow onboarding teacher creation" ON teachers
   FOR INSERT
   WITH CHECK (
-    NOT EXISTS (SELECT 1 FROM schools) -- Only allow if no schools exist (onboarding)
+    NOT schools_exist() -- Only allow if no schools exist (onboarding, using function to avoid recursion)
     OR is_admin() -- Or if admin
-    OR NOT EXISTS (SELECT 1 FROM teachers) -- Or if first teacher
+    OR NOT teachers_exist() -- Or if first teacher (using function to avoid recursion)
   );
 
 -- Function to check if user is principal (bypasses RLS to avoid recursion)
