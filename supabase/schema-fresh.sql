@@ -218,6 +218,20 @@ CREATE INDEX idx_allowed_emails_pattern ON school_allowed_emails(email_pattern);
 CREATE INDEX idx_allowed_emails_active ON school_allowed_emails(active) WHERE active = true;
 
 -- ============================================
+-- RLS HELPER FUNCTIONS (Must be defined before RLS policies)
+-- ============================================
+-- These functions use SECURITY DEFINER to bypass RLS and avoid infinite recursion
+
+-- Function to check product admin status (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_product_admin(check_email VARCHAR)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM product_admins 
+    WHERE email = check_email AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- ============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
 
@@ -232,24 +246,25 @@ ALTER TABLE whatsapp_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE school_allowed_emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE correction_requests ENABLE ROW LEVEL SECURITY;
 
--- Product Admins: Can view all product admins
+-- Product Admins: Users can check their own status (for authentication)
+CREATE POLICY "Users can check own product admin status" ON product_admins
+  FOR SELECT
+  USING (
+    email = auth.jwt() ->> 'email'
+  );
+
+-- Product Admins: Product admins can view all (using function to avoid recursion)
 CREATE POLICY "Product admins can view all" ON product_admins
   FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM product_admins 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    is_product_admin(auth.jwt() ->> 'email')
   );
 
 -- Schools: Product admins can view all, others only their school
 CREATE POLICY "Users can view their school" ON schools
   FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM product_admins 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    is_product_admin(auth.jwt() ->> 'email')
     OR school_id IN (
       SELECT school_id FROM teachers 
       WHERE email = auth.jwt() ->> 'email' AND active = true
@@ -260,10 +275,7 @@ CREATE POLICY "Users can view their school" ON schools
 CREATE POLICY "Product admins can manage schools" ON schools
   FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM product_admins 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    is_product_admin(auth.jwt() ->> 'email')
   );
 
 -- Teachers: Users can see teachers in their school
@@ -441,6 +453,7 @@ CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
 -- ============================================
 -- HELPER FUNCTIONS
 -- ============================================
+-- Note: is_product_admin() is defined in RLS section above
 
 -- Function to get user's school_id
 CREATE OR REPLACE FUNCTION get_user_school_id()
