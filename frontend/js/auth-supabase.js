@@ -192,10 +192,16 @@ async function signInWithGoogle() {
       throw new Error('Supabase not initialized');
     }
     
+    // Get current path and construct redirect URL with base path for GitHub Pages
+    const currentPath = window.location.pathname;
+    // Remove filename and keep directory path (e.g., /ClassLedger/login.html -> /ClassLedger/)
+    const basePath = currentPath.replace(/[^/]*$/, '');
+    const redirectUrl = `${window.location.origin}${basePath}login.html`;
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/login.html`
+        redirectTo: redirectUrl
       }
     });
     
