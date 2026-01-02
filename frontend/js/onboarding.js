@@ -170,13 +170,32 @@ async function handleTeacherSubmit(e) {
     showLoading('Adding teacher...');
     
     const supabase = getSupabase();
+    
+    // Check if teacher already exists
+    const { data: existingTeacher, error: checkError } = await supabase
+      .from('teachers')
+      .select('email')
+      .eq('email', teacherData.email)
+      .single();
+    
+    if (existingTeacher) {
+      throw new Error(`Teacher with email ${teacherData.email} already exists. Please use a different email.`);
+    }
+    
+    // Insert teacher
     const { data: teacher, error } = await supabase
       .from('teachers')
       .insert(teacherData)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      // Handle duplicate key error specifically
+      if (error.code === '23505') {
+        throw new Error(`Teacher with email ${teacherData.email} already exists. Please use a different email.`);
+      }
+      throw error;
+    }
     
     // Add to list
     onboardingData.teachers.push(teacher);
@@ -188,7 +207,8 @@ async function handleTeacherSubmit(e) {
     showToast('Teacher added successfully!', 'success');
   } catch (error) {
     console.error('Add teacher error:', error);
-    showToast('Error adding teacher: ' + error.message, 'error');
+    const errorMessage = error.message || 'Failed to add teacher. Please try again.';
+    showToast('Error adding teacher: ' + errorMessage, 'error');
   } finally {
     hideLoading();
   }
