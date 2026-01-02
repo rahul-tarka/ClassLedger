@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Login - ClassLedger by Tarka</title>
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="stylesheet" href="css/styles.css">
@@ -66,128 +66,105 @@
         </div>
     </footer>
 
-    <script src="js/auth.js"></script>
+    <!-- Load Supabase library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/auth-supabase.js"></script>
+    <script src="js/onboarding-check.js"></script>
     <script>
-        // Check URL parameters immediately (before DOMContentLoaded)
-        // This handles OAuth redirects that come with user data in URL
-        (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const userParam = urlParams.get('user');
-            const errorParam = urlParams.get('error');
-            
-            if (errorParam === 'unauthorized') {
-                // Wait for DOM, then show access denied
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        showAccessDenied();
-                    });
-                } else {
-                    showAccessDenied();
-                }
+        // Handle Supabase OAuth callback
+        document.addEventListener('DOMContentLoaded', async function() {
+            const supabase = getSupabase();
+            if (!supabase) {
+                console.error('Supabase not initialized');
                 return;
-            } else if (userParam) {
+            }
+
+            // Check for OAuth callback
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (session && !sessionError) {
+                // User is authenticated, check their role and redirect
+                const authResult = await authenticateUser();
+                if (authResult.success) {
+                    window.location.href = authResult.redirect;
+                    return;
+                } else {
+                    // Show access denied
+                    showAccessDenied(authResult.error || 'Access denied');
+                    return;
+                }
+            }
+
+            // Check if already logged in from sessionStorage
+            const userStr = sessionStorage.getItem('user');
+            if (userStr) {
                 try {
-                    const user = JSON.parse(decodeURIComponent(userParam));
-                    sessionStorage.setItem('user', JSON.stringify(user));
-                    sessionStorage.setItem('authenticated', 'true');
-                    // Clean URL immediately
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    // Redirect to appropriate dashboard
-                    // Wait for auth.js to load if needed
-                    if (typeof redirectToDashboard === 'function') {
-                        redirectToDashboard(user.role);
-                    } else {
-                        // Wait for auth.js to load
-                        window.addEventListener('load', function() {
-                            if (typeof redirectToDashboard === 'function') {
-                                redirectToDashboard(user.role);
-                            } else {
-                                // Fallback: redirect based on role
-                                const roleMap = {
-                                    'teacher': 'teacher-dashboard.html',
-                                    'admin': 'admin-dashboard.html',
-                                    'principal': 'principal-dashboard.html'
-                                };
-                                const dashboard = roleMap[user.role] || 'index.html';
-                                window.location.href = dashboard;
-                            }
-                        });
-                    }
+                    const user = JSON.parse(userStr);
+                    const redirectMap = {
+                        'product_admin': 'product-admin-dashboard.html',
+                        'admin': 'admin-dashboard.html',
+                        'teacher': 'teacher-dashboard.html',
+                        'principal': 'principal-dashboard.html'
+                    };
+                    const redirect = redirectMap[user.role] || redirectMap[user.type] || 'index.html';
+                    window.location.href = redirect;
                     return;
                 } catch (e) {
-                    console.error('Error parsing user data:', e);
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', function() {
-                            showAccessDenied();
-                        });
-                    } else {
-                        showAccessDenied();
-                    }
-                    return;
-                }
-            }
-        })();
-
-        // Wait for DOM to be ready for button initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if we're showing access denied (error parameter in URL)
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('error') === 'unauthorized') {
-                // Access denied is already shown, don't try to initialize button
-                return;
-            }
-
-            // Check if already logged in (skip if we just processed URL params)
-            if (!window.location.search.includes('user=') && !window.location.search.includes('error=')) {
-                if (isAuthenticated()) {
-                    const user = getCurrentUser();
-                    if (user) {
-                        redirectToDashboard(user.role);
-                        return;
-                    }
+                    console.error('Error parsing user from sessionStorage:', e);
+                    sessionStorage.clear();
                 }
             }
 
             // Initialize login button
             const loginBtn = document.getElementById('loginBtn');
-            if (!loginBtn) {
-                // Button might have been removed by showAccessDenied, check if we should show it
-                if (urlParams.get('error') !== 'unauthorized') {
-                    console.error('Login button not found!');
-                }
-                return;
+            if (loginBtn) {
+                loginBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    
+                    const statusEl = document.getElementById('loginStatus');
+                    if (statusEl) {
+                        statusEl.style.display = 'block';
+                        statusEl.className = 'alert alert-info';
+                        statusEl.textContent = 'Redirecting to Google sign-in...';
+                    }
+                    
+                    // Sign in with Google via Supabase
+                    const result = await signInWithGoogle();
+                    if (!result.success) {
+                        if (statusEl) {
+                            statusEl.className = 'alert alert-danger';
+                            statusEl.textContent = 'Error: ' + (result.error || 'Failed to sign in');
+                        }
+                    }
+                    // If successful, signInWithGoogle will redirect to Google OAuth
+                });
             }
-
-            loginBtn.addEventListener('click', async function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                console.log('Login button clicked');
-                
-                const statusEl = document.getElementById('loginStatus');
-                if (statusEl) {
-                    statusEl.style.display = 'block';
-                    statusEl.className = 'alert alert-info';
-                    statusEl.textContent = 'Redirecting to Google sign-in...';
-                }
-                
-                // Get API URL from auth.js (should be loaded by now)
-                const apiUrl = typeof API_URL !== 'undefined' ? API_URL : 'https://script.google.com/macros/s/AKfycbwtvbmUP8SDG3pmLZ0uCxoZjZ8Fs61XFHXZI5sh0GmkMnRK_VrrW7DHO-DpG-5o5elR/exec';
-                
-                // Redirect to Apps Script Web App which will handle OAuth
-                // The Web App will redirect back with user data
-                const frontendBaseUrl = window.location.origin + window.location.pathname.replace('/login.html', '');
-                const redirectUrl = `${frontendBaseUrl}/login.html`;
-                
-                console.log('Redirecting to:', `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`);
-                
-                // Redirect to Web App with redirect parameter
-                window.location.href = `${apiUrl}?action=auth&redirect=${encodeURIComponent(redirectUrl)}`;
-            });
         });
+
+        // Helper function to show access denied
+        function showAccessDenied(message) {
+            const main = document.querySelector('main');
+            if (main) {
+                main.innerHTML = `
+                    <div class="container">
+                        <div class="card" style="max-width: 500px; margin: 3rem auto;">
+                            <div class="text-center">
+                                <h1 style="color: var(--danger-color, #dc3545); margin-bottom: 1rem;">Access Denied</h1>
+                                <p style="font-size: 1.125rem; margin-bottom: 2rem;">
+                                    ${message || 'You are not authorized to use ClassLedger.'}
+                                </p>
+                                <p style="color: var(--text-secondary, #666); margin-bottom: 2rem;">
+                                    Please contact your school administrator to be added to the system.
+                                </p>
+                                <a href="index.html" class="btn btn-primary">Return to Homepage</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
     </script>
-    <script src="js/supabase-config.js"></script>
-    <script src="js/onboarding-check.js"></script>
 </body>
 </html>
 

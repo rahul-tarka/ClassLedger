@@ -238,6 +238,13 @@ function getCurrentUser() {
 }
 
 /**
+ * Global logout function (for HTML onclick handlers)
+ */
+async function logout() {
+  await signOut();
+}
+
+/**
  * Check if user is authenticated
  */
 function isAuthenticated() {
