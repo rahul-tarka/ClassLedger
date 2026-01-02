@@ -8,11 +8,13 @@
 -- Drop in reverse order of dependencies
 DROP TABLE IF EXISTS correction_requests CASCADE;
 DROP TABLE IF EXISTS whatsapp_log CASCADE;
+DROP TABLE IF EXISTS school_allowed_emails CASCADE;
 DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS attendance_log CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS teachers CASCADE;
 DROP TABLE IF EXISTS schools CASCADE;
+DROP TABLE IF EXISTS product_admins CASCADE;
 
 -- Drop functions if they exist
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
@@ -29,6 +31,17 @@ DROP FUNCTION IF EXISTS get_student_attendance_summary(VARCHAR, VARCHAR) CASCADE
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
+-- PRODUCT ADMINS TABLE (Super Admin)
+-- ============================================
+CREATE TABLE product_admins (
+  email VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- SCHOOLS TABLE
 -- ============================================
 CREATE TABLE schools (
@@ -37,6 +50,7 @@ CREATE TABLE schools (
   address TEXT,
   phone VARCHAR(20),
   email VARCHAR(255),
+  product_admin_email VARCHAR(255) REFERENCES product_admins(email) ON DELETE SET NULL,
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -122,6 +136,20 @@ CREATE TABLE whatsapp_log (
 );
 
 -- ============================================
+-- SCHOOL ALLOWED EMAILS TABLE
+-- ============================================
+CREATE TABLE school_allowed_emails (
+  id SERIAL PRIMARY KEY,
+  school_id VARCHAR(50) NOT NULL REFERENCES schools(school_id) ON DELETE CASCADE,
+  email_pattern VARCHAR(255) NOT NULL, -- Can be specific email or domain (e.g., @school.com)
+  type VARCHAR(20) NOT NULL CHECK (type IN ('email', 'domain')), -- 'email' for specific, 'domain' for domain
+  active BOOLEAN DEFAULT true,
+  created_by VARCHAR(255) REFERENCES teachers(email) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(school_id, email_pattern)
+);
+
+-- ============================================
 -- CORRECTION REQUESTS TABLE
 -- ============================================
 CREATE TABLE correction_requests (
@@ -142,8 +170,13 @@ CREATE TABLE correction_requests (
 -- INDEXES for Performance
 -- ============================================
 
+-- Product admins indexes
+CREATE INDEX idx_product_admins_active ON product_admins(active) WHERE active = true;
+CREATE INDEX idx_product_admins_email ON product_admins(email);
+
 -- Schools indexes
 CREATE INDEX idx_schools_active ON schools(active) WHERE active = true;
+CREATE INDEX idx_schools_product_admin ON schools(product_admin_email);
 
 -- Teachers indexes
 CREATE INDEX idx_teachers_school_id ON teachers(school_id);
@@ -179,39 +212,58 @@ CREATE INDEX idx_correction_student_id ON correction_requests(student_id);
 CREATE INDEX idx_correction_status ON correction_requests(status);
 CREATE INDEX idx_correction_date ON correction_requests(date);
 
+-- School allowed emails indexes
+CREATE INDEX idx_allowed_emails_school_id ON school_allowed_emails(school_id);
+CREATE INDEX idx_allowed_emails_pattern ON school_allowed_emails(email_pattern);
+CREATE INDEX idx_allowed_emails_active ON school_allowed_emails(active) WHERE active = true;
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
 
 -- Enable RLS on all tables
+ALTER TABLE product_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE whatsapp_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE school_allowed_emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE correction_requests ENABLE ROW LEVEL SECURITY;
 
--- Schools: Users can only see their school
+-- Product Admins: Can view all product admins
+CREATE POLICY "Product admins can view all" ON product_admins
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM product_admins 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+  );
+
+-- Schools: Product admins can view all, others only their school
 CREATE POLICY "Users can view their school" ON schools
   FOR SELECT
   USING (
-    school_id IN (
+    EXISTS (
+      SELECT 1 FROM product_admins 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
+    )
+    OR school_id IN (
       SELECT school_id FROM teachers 
       WHERE email = auth.jwt() ->> 'email' AND active = true
     )
   );
 
--- Schools: Admin can insert/update schools (for onboarding)
-CREATE POLICY "Admin can manage schools" ON schools
+-- Schools: Product admins can manage all schools
+CREATE POLICY "Product admins can manage schools" ON schools
   FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
+      SELECT 1 FROM product_admins 
+      WHERE email = auth.jwt() ->> 'email' AND active = true
     )
-    OR NOT EXISTS (SELECT 1 FROM schools) -- Allow first school creation
   );
 
 -- Teachers: Users can see teachers in their school
@@ -343,6 +395,25 @@ CREATE POLICY "Admin can manage correction requests" ON correction_requests
       AND role = 'admin' AND active = true
     )
   );
+
+-- School Allowed Emails: School admin can manage
+CREATE POLICY "School admin can manage allowed emails" ON school_allowed_emails
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM teachers t
+      JOIN schools s ON t.school_id = s.school_id
+      WHERE t.email = auth.jwt() ->> 'email'
+      AND t.role = 'admin'
+      AND t.active = true
+      AND school_allowed_emails.school_id = s.school_id
+    )
+  );
+
+-- School Allowed Emails: Anyone can view (for login check)
+CREATE POLICY "Anyone can view allowed emails" ON school_allowed_emails
+  FOR SELECT
+  USING (active = true);
 
 -- ============================================
 -- FUNCTIONS & TRIGGERS

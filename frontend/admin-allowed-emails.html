@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Allowed Emails - ClassLedger</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-container">
+                <img src="assets/logo-white.svg" alt="ClassLedger" class="header-logo">
+            </div>
+            <nav>
+                <a href="admin-dashboard.html">Dashboard</a>
+                <a href="admin-allowed-emails.html" class="active">Allowed Emails</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container" style="max-width: 800px; margin: 2rem auto;">
+            <div class="card">
+                <h1 style="margin-bottom: 1rem;">Manage Allowed Emails</h1>
+                <p style="color: #666; margin-bottom: 2rem;">
+                    Define which email addresses or domains can login to your school's ClassLedger.
+                    Teachers and Principals must have their email in this list to access the system.
+                </p>
+
+                <!-- Add Email Form -->
+                <div class="card" style="background: #f9f9f9; margin-bottom: 2rem;">
+                    <h2 style="margin-bottom: 1rem;">Add Allowed Email/Domain</h2>
+                    <form id="addEmailForm">
+                        <div class="form-group">
+                            <label for="emailType">Type *</label>
+                            <select id="emailType" name="emailType" required>
+                                <option value="email">Specific Email</option>
+                                <option value="domain">Email Domain</option>
+                            </select>
+                            <small style="color: #666; display: block; margin-top: 0.5rem;">
+                                <strong>Email:</strong> Specific email address (e.g., teacher@school.com)<br>
+                                <strong>Domain:</strong> All emails from domain (e.g., @school.com)
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="emailPattern">Email or Domain *</label>
+                            <input type="text" id="emailPattern" name="emailPattern" required 
+                                   placeholder="teacher@school.com or @school.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add to Allowed List</button>
+                    </form>
+                </div>
+
+                <!-- Allowed Emails List -->
+                <div>
+                    <h2 style="margin-bottom: 1rem;">Current Allowed Emails/Domains</h2>
+                    <div id="allowedEmailsList">
+                        <p style="text-align: center; color: #666; padding: 2rem;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/supabase-config.js"></script>
+    <script src="js/admin-allowed-emails.js"></script>
+</body>
+</html>
+
