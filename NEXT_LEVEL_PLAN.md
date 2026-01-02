@@ -112,12 +112,6 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
   - Holiday calendar management
   - WhatsApp alert settings
 
-- ✅ **Data Management**
-  - Backup data to Google Drive
-  - Restore from backup
-  - Data export (all sheets)
-  - Data import
-  - Archive old data
 
 **Impact:** Complete control center for school administration
 
@@ -184,27 +178,6 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
 
 ---
 
-### 3.3 **Communication Enhancements**
-
-**WhatsApp Integration:**
-- ✅ **Bulk WhatsApp Alerts**
-  - Send alerts to all absent students
-  - Custom message templates
-  - Scheduled alerts
-  - Alert history
-
-- ✅ **SMS Integration** (Future)
-  - SMS alerts for critical absences
-  - Parent notification system
-
-- ✅ **Email Reports**
-  - Daily attendance summary emails
-  - Weekly reports to principal
-  - Monthly reports to parents
-  - Custom email templates
-
-**Impact:** Better parent-school communication
-
 ---
 
 ### 3.4 **User Experience Enhancements**
@@ -246,26 +219,9 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
 ### 4.1 **Student Portal** (Future)
 
 **Features:**
-- ✅ Student login (separate from teacher)
-- ✅ View own attendance history
 - ✅ Download attendance certificate
 - ✅ Request attendance correction
-- ✅ View class schedule
 
-**Impact:** Students can track their own attendance
-
----
-
-### 4.2 **Parent Portal** (Future)
-
-**Features:**
-- ✅ Parent login
-- ✅ View child's attendance
-- ✅ Receive attendance alerts
-- ✅ Download attendance reports
-- ✅ Contact teacher/admin
-
-**Impact:** Parent engagement and transparency
 
 ---
 
@@ -289,22 +245,12 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
   - Auto-marking based on rules
   - Exception handling
 
-- ✅ **Biometric Integration** (Future)
-  - Fingerprint attendance
-  - Face recognition
-  - RFID card integration
-
-**Impact:** Enterprise-grade attendance system
 
 ---
 
 ### 4.4 **Integration Features**
 
 **Third-party Integrations:**
-- ✅ **Google Classroom Integration**
-  - Sync students from Google Classroom
-  - Auto-create classes
-  - Link assignments
 
 - ✅ **Looker Studio Integration**
   - Pre-built dashboards
@@ -316,57 +262,10 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
   - Holiday calendar import
   - Event-based attendance
 
-- ✅ **SIS Integration** (Future)
-  - Student Information System sync
-  - ERP integration
-  - Fee management link
-
 **Impact:** Seamless workflow integration
 
 ---
 
-## 🎯 Phase 5: Enterprise Features
-
-### 5.1 **Multi-School Management**
-
-**Features:**
-- ✅ **School Hierarchy**
-  - Multiple schools under one account
-  - Central admin dashboard
-  - School-specific settings
-  - Cross-school reports
-
-- ✅ **Franchise Management**
-  - Manage multiple branches
-  - Centralized reporting
-  - Branch comparison
-
-**Impact:** Scale to multiple schools
-
----
-
-### 5.2 **Advanced Security**
-
-**Security Enhancements:**
-- ✅ **Role-Based Access Control (RBAC)**
-  - Custom roles
-  - Permission matrix
-  - Granular access control
-
-- ✅ **Two-Factor Authentication (2FA)**
-  - SMS/Email OTP
-  - Authenticator app support
-
-- ✅ **IP Whitelisting**
-  - Restrict access by IP
-  - Location-based access
-
-- ✅ **Audit Trail Enhancement**
-  - Detailed logging
-  - Change tracking
-  - Compliance reports
-
-**Impact:** Enterprise-grade security
 
 ---
 
@@ -391,26 +290,6 @@ Complete roadmap to take ClassLedger from current state to enterprise-grade scho
 **Impact:** AI-powered insights
 
 ---
-
-### 5.4 **Reporting & Compliance**
-
-**Advanced Reports:**
-- ✅ **Government Compliance Reports**
-  - Statutory attendance reports
-  - Regulatory compliance
-  - Audit-ready reports
-
-- ✅ **Custom Report Builder**
-  - Drag-and-drop report builder
-  - Custom fields
-  - Scheduled reports
-
-- ✅ **Data Visualization**
-  - Interactive dashboards
-  - Custom charts
-  - Export options
-
-**Impact:** Complete reporting solution
 
 ---
 
