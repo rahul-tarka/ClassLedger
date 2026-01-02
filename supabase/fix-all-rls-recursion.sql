@@ -94,6 +94,7 @@ CREATE POLICY "Users can view their school" ON schools
     is_product_admin(auth.jwt() ->> 'email')
     OR school_id = get_user_school_id()
     OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
+    OR auth.role() = 'anon' -- Allow anonymous access during onboarding
   );
 
 DROP POLICY IF EXISTS "Product admins can manage schools" ON schools;
@@ -102,6 +103,7 @@ CREATE POLICY "Product admins can manage schools" ON schools
   USING (is_product_admin(auth.jwt() ->> 'email'));
 
 -- Allow school creation during onboarding (when no schools exist)
+-- This allows anonymous users to create the first school
 DROP POLICY IF EXISTS "Allow onboarding school creation" ON schools;
 CREATE POLICY "Allow onboarding school creation" ON schools
   FOR INSERT
@@ -120,6 +122,7 @@ CREATE POLICY "Users can view teachers in their school" ON teachers
     OR school_id = get_user_school_id()
     OR NOT teachers_exist() -- Allow viewing during onboarding (using function to avoid recursion)
     OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
+    OR auth.role() = 'anon' -- Allow anonymous access during onboarding
   );
 
 DROP POLICY IF EXISTS "Admin can manage teachers" ON teachers;
@@ -132,6 +135,7 @@ CREATE POLICY "Admin can manage teachers" ON teachers
   );
 
 -- Allow teacher creation during onboarding
+-- This allows anonymous users to create the first admin during onboarding
 DROP POLICY IF EXISTS "Allow onboarding teacher creation" ON teachers;
 CREATE POLICY "Allow onboarding teacher creation" ON teachers
   FOR INSERT

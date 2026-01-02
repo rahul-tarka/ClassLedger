@@ -319,6 +319,7 @@ CREATE POLICY "Users can view their school" ON schools
     is_product_admin(auth.jwt() ->> 'email')
     OR school_id = get_user_school_id()
     OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
+    OR auth.role() = 'anon' -- Allow anonymous access during onboarding
   );
 
 -- Schools: Product admins can manage all schools
@@ -329,6 +330,7 @@ CREATE POLICY "Product admins can manage schools" ON schools
   );
 
 -- Allow school creation during onboarding (when no schools exist)
+-- This allows anonymous users to create the first school
 CREATE POLICY "Allow onboarding school creation" ON schools
   FOR INSERT
   WITH CHECK (
@@ -345,6 +347,7 @@ CREATE POLICY "Users can view teachers in their school" ON teachers
     OR school_id = get_user_school_id()  -- Users can see teachers in their school
     OR NOT teachers_exist() -- Allow first teacher creation (using function to avoid recursion)
     OR NOT schools_exist() -- Allow viewing during onboarding (using function to avoid recursion)
+    OR auth.role() = 'anon' -- Allow anonymous access during onboarding
   );
 
 -- Teachers: Admin can manage teachers
@@ -358,6 +361,7 @@ CREATE POLICY "Admin can manage teachers" ON teachers
   );
 
 -- Allow teacher creation during onboarding
+-- This allows anonymous users to create the first admin during onboarding
 CREATE POLICY "Allow onboarding teacher creation" ON teachers
   FOR INSERT
   WITH CHECK (
