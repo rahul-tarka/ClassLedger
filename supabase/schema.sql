@@ -186,9 +186,10 @@ CREATE POLICY "Teachers can view students in their classes" ON students
       WHERE email = auth.jwt() ->> 'email' AND active = true
     )
     AND (
-      class = ANY(
-        SELECT class_assigned FROM teachers 
-        WHERE email = auth.jwt() ->> 'email'
+      EXISTS (
+        SELECT 1 FROM teachers t
+        WHERE t.email = auth.jwt() ->> 'email'
+        AND students.class = ANY(t.class_assigned)
       )
       OR EXISTS (
         SELECT 1 FROM teachers 
@@ -214,12 +215,12 @@ CREATE POLICY "Teachers can insert attendance" ON attendance_log
   FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND active = true
+      SELECT 1 FROM teachers t
+      WHERE t.email = auth.jwt() ->> 'email' 
+      AND t.active = true
       AND (
-        class = ANY(class_assigned)
-        OR role IN ('admin', 'principal')
+        attendance_log.class = ANY(t.class_assigned)
+        OR t.role IN ('admin', 'principal')
       )
     )
   );
