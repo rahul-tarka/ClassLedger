@@ -4,8 +4,8 @@
  */
 
 // Supabase Configuration
-const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; // e.g., https://xxxxx.supabase.co
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Public anon key
+const SUPABASE_URL = 'https://xluhmaqeetqprzqpbdan.supabase.co'; // e.g., https://xxxxx.supabase.co
+const SUPABASE_ANON_KEY = 'sb_publishable_FjxcEIH2rlco6p-8WOzJtA_a0ptMtG2'; // Public anon key
 
 // Initialize Supabase client
 let supabaseClient = null;
