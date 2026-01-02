@@ -231,6 +231,57 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql SECURITY DEFINER;
 
+-- Function to get user's school_id (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION get_user_school_id()
+RETURNS VARCHAR(50) AS $$
+  SELECT school_id FROM teachers 
+  WHERE email = auth.jwt() ->> 'email' 
+  AND active = true 
+  LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if user is admin (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role = 'admin' 
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if user is principal (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_principal()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role = 'principal' 
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if user is admin or principal (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_admin_or_principal()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role IN ('admin', 'principal')
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to get user's assigned classes (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION get_user_classes()
+RETURNS TEXT[] AS $$
+  SELECT class_assigned FROM teachers 
+  WHERE email = auth.jwt() ->> 'email' 
+  AND active = true 
+  LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
@@ -261,14 +312,12 @@ CREATE POLICY "Product admins can view all" ON product_admins
   );
 
 -- Schools: Product admins can view all, others only their school
+-- Use get_user_school_id() function to avoid recursion
 CREATE POLICY "Users can view their school" ON schools
   FOR SELECT
   USING (
     is_product_admin(auth.jwt() ->> 'email')
-    OR school_id IN (
-      SELECT school_id FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    OR school_id = get_user_school_id()
   );
 
 -- Schools: Product admins can manage all schools
@@ -279,96 +328,96 @@ CREATE POLICY "Product admins can manage schools" ON schools
   );
 
 -- Teachers: Users can see teachers in their school
+-- Allow users to see their own record + teachers in their school (using function to avoid recursion)
 CREATE POLICY "Users can view teachers in their school" ON teachers
   FOR SELECT
   USING (
-    school_id IN (
-      SELECT school_id FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    email = auth.jwt() ->> 'email'  -- Users can see their own record
+    OR school_id = get_user_school_id()  -- Users can see teachers in their school
     OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first teacher creation
   );
 
 -- Teachers: Admin can manage teachers
+-- Use is_admin() function to avoid recursion
 CREATE POLICY "Admin can manage teachers" ON teachers
   FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
+    is_admin()  -- Use existing SECURITY DEFINER function
     OR NOT EXISTS (SELECT 1 FROM teachers) -- Allow first admin creation
   );
 
+-- Function to check if user is principal (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_principal()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role = 'principal' 
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to check if user is admin or principal (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_admin_or_principal()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM teachers 
+    WHERE email = auth.jwt() ->> 'email' 
+    AND role IN ('admin', 'principal')
+    AND active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Function to get user's assigned classes (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION get_user_classes()
+RETURNS TEXT[] AS $$
+  SELECT class_assigned FROM teachers 
+  WHERE email = auth.jwt() ->> 'email' 
+  AND active = true 
+  LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- Students: Teachers can see students in their classes
+-- Use helper functions to avoid recursion
 CREATE POLICY "Teachers can view students in their classes" ON students
   FOR SELECT
   USING (
-    school_id IN (
-      SELECT school_id FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    school_id = get_user_school_id()
     AND (
-      EXISTS (
-        SELECT 1 FROM teachers t
-        WHERE t.email = auth.jwt() ->> 'email'
-        AND students.class = ANY(t.class_assigned)
-      )
-      OR EXISTS (
-        SELECT 1 FROM teachers 
-        WHERE email = auth.jwt() ->> 'email' 
-        AND role IN ('admin', 'principal')
-      )
+      students.class = ANY(get_user_classes())
+      OR is_admin_or_principal()
     )
   );
 
 -- Admin can insert/update/delete students
 CREATE POLICY "Admin can manage students" ON students
   FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
-  );
+  USING (is_admin());
 
 -- Attendance: Teachers can insert attendance for their classes
+-- Use helper functions to avoid recursion
 CREATE POLICY "Teachers can insert attendance" ON attendance_log
   FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM teachers t
-      WHERE t.email = auth.jwt() ->> 'email' 
-      AND t.active = true
-      AND (
-        attendance_log.class = ANY(t.class_assigned)
-        OR t.role IN ('admin', 'principal')
-      )
+    attendance_log.school_id = get_user_school_id()
+    AND (
+      attendance_log.class = ANY(get_user_classes())
+      OR is_admin_or_principal()
     )
   );
 
 -- Attendance: Users can view attendance for their school/classes
+-- Use get_user_school_id() function to avoid recursion
 CREATE POLICY "Users can view attendance" ON attendance_log
   FOR SELECT
   USING (
-    school_id IN (
-      SELECT school_id FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' AND active = true
-    )
+    school_id = get_user_school_id()
   );
 
 -- Admin can edit any attendance
 CREATE POLICY "Admin can edit attendance" ON attendance_log
   FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
-  );
+  USING (is_admin());
 
 -- Audit log: All authenticated users can insert
 CREATE POLICY "Authenticated users can log actions" ON audit_log
@@ -378,48 +427,24 @@ CREATE POLICY "Authenticated users can log actions" ON audit_log
 -- Audit log: Only admins can view
 CREATE POLICY "Admin can view audit log" ON audit_log
   FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
-  );
+  USING (is_admin());
 
 -- WhatsApp log: Admin can view
 CREATE POLICY "Admin can view WhatsApp log" ON whatsapp_log
   FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
-  );
+  USING (is_admin());
 
 -- Correction requests: Admin can view and manage
 CREATE POLICY "Admin can manage correction requests" ON correction_requests
   FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM teachers 
-      WHERE email = auth.jwt() ->> 'email' 
-      AND role = 'admin' AND active = true
-    )
-  );
+  USING (is_admin());
 
 -- School Allowed Emails: School admin can manage
 CREATE POLICY "School admin can manage allowed emails" ON school_allowed_emails
   FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM teachers t
-      JOIN schools s ON t.school_id = s.school_id
-      WHERE t.email = auth.jwt() ->> 'email'
-      AND t.role = 'admin'
-      AND t.active = true
-      AND school_allowed_emails.school_id = s.school_id
-    )
+    is_admin()
+    AND school_allowed_emails.school_id = get_user_school_id()
   );
 
 -- School Allowed Emails: Anyone can view (for login check)
@@ -455,25 +480,7 @@ CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
 -- ============================================
 -- Note: is_product_admin() is defined in RLS section above
 
--- Function to get user's school_id
-CREATE OR REPLACE FUNCTION get_user_school_id()
-RETURNS VARCHAR(50) AS $$
-  SELECT school_id FROM teachers 
-  WHERE email = auth.jwt() ->> 'email' 
-  AND active = true 
-  LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER;
-
--- Function to check if user is admin
-CREATE OR REPLACE FUNCTION is_admin()
-RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM teachers 
-    WHERE email = auth.jwt() ->> 'email' 
-    AND role = 'admin' 
-    AND active = true
-  );
-$$ LANGUAGE sql SECURITY DEFINER;
+-- Note: get_user_school_id() and is_admin() are defined in RLS section above
 
 -- Function to get student attendance summary
 CREATE OR REPLACE FUNCTION get_student_attendance_summary(
