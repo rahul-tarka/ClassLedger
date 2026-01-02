@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS attendance_log (
   student_id VARCHAR(50) NOT NULL REFERENCES students(student_id),
   school_id VARCHAR(50) NOT NULL REFERENCES schools(school_id),
   class VARCHAR(50) NOT NULL,
-  status VARCHAR(1) NOT NULL CHECK (status IN ('P', 'A', 'L')),
+  status VARCHAR(1) CHECK (status IS NULL OR status IN ('P', 'A', 'L')),
   type VARCHAR(20) NOT NULL CHECK (type IN ('CHECK_IN', 'CHECK_OUT')),
   teacher_email VARCHAR(255) REFERENCES teachers(email),
   remark TEXT,
