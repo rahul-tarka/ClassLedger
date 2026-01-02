@@ -22,6 +22,7 @@ async function authenticateUser() {
     }
     
     const userEmail = user.email;
+    console.log('🔍 Authenticating user:', userEmail);
     
     // Step 1: Check if Product Admin
     const { data: productAdmin, error: productAdminError } = await supabase
@@ -30,6 +31,8 @@ async function authenticateUser() {
       .eq('email', userEmail)
       .eq('active', true)
       .single();
+    
+    console.log('📋 Product Admin check:', { productAdmin, error: productAdminError });
     
     if (productAdmin && !productAdminError) {
       // Product Admin
@@ -59,6 +62,8 @@ async function authenticateUser() {
       .eq('active', true)
       .single();
     
+    console.log('📋 School Admin check:', { schoolAdmin, error: schoolAdminError });
+    
     if (schoolAdmin && !schoolAdminError) {
       // School Admin
       const userData = {
@@ -87,6 +92,8 @@ async function authenticateUser() {
       .eq('email', userEmail)
       .eq('active', true)
       .single();
+    
+    console.log('📋 Teacher/Principal check:', { teacher, error: teacherError });
     
     if (teacher && !teacherError) {
       // User exists in teachers table, now check allowed emails
@@ -124,9 +131,15 @@ async function authenticateUser() {
     }
     
     // User not found in any table
+    console.error('❌ User not found in any table:', userEmail);
+    console.log('💡 Please check:');
+    console.log('   1. Is email in product_admins table?');
+    console.log('   2. Is email in teachers table?');
+    console.log('   3. Is active = true?');
+    
     return {
       success: false,
-      error: 'You are not authorized to use ClassLedger. Please contact your administrator.'
+      error: `You are not authorized to use ClassLedger. Email: ${userEmail}. Please contact your administrator.`
     };
     
   } catch (error) {

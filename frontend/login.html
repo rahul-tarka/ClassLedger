@@ -85,12 +85,16 @@
             
             if (session && !sessionError) {
                 // User is authenticated, check their role and redirect
+                console.log('✅ OAuth session found, authenticating user...');
                 const authResult = await authenticateUser();
+                console.log('🔐 Authentication result:', authResult);
                 if (authResult.success) {
+                    console.log('✅ Authentication successful, redirecting to:', authResult.redirect);
                     window.location.href = authResult.redirect;
                     return;
                 } else {
                     // Show access denied
+                    console.error('❌ Authentication failed:', authResult.error);
                     showAccessDenied(authResult.error || 'Access denied');
                     return;
                 }
