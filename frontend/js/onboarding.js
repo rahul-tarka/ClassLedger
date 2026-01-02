@@ -307,21 +307,57 @@ async function handleTeacherCsvImport(event) {
       teachers.push(teacherData);
     }
     
-    // Insert teachers
+    // Insert teachers (skip duplicates)
     const supabase = getSupabase();
+    
+    // Filter out duplicates - check existing teachers first
+    const existingEmails = new Set();
+    for (const teacher of teachers) {
+      const { data: existing } = await supabase
+        .from('teachers')
+        .select('email')
+        .eq('email', teacher.email)
+        .single();
+      
+      if (existing) {
+        existingEmails.add(teacher.email);
+      }
+    }
+    
+    // Filter out teachers that already exist
+    const newTeachers = teachers.filter(t => !existingEmails.has(t.email));
+    
+    if (newTeachers.length === 0) {
+      throw new Error('All teachers already exist in the system.');
+    }
+    
+    if (existingEmails.size > 0) {
+      showToast(`Skipping ${existingEmails.size} duplicate teacher(s).`, 'warning');
+    }
+    
     const { data, error } = await supabase
       .from('teachers')
-      .insert(teachers)
+      .insert(newTeachers)
       .select();
     
-    if (error) throw error;
+    if (error) {
+      // Handle duplicate key errors in bulk insert
+      if (error.code === '23505') {
+        throw new Error('Some teachers already exist. Please check for duplicate emails.');
+      }
+      throw error;
+    }
     
     // Add to list
     onboardingData.teachers.push(...data);
     renderTeachersList();
     
-    document.getElementById('teacherImportStatus').textContent = `✅ Imported ${data.length} teachers successfully!`;
-    showToast(`Imported ${data.length} teachers!`, 'success');
+    let statusMsg = `✅ Imported ${data.length} teacher(s) successfully!`;
+    if (existingEmails.size > 0) {
+      statusMsg += ` (${existingEmails.size} duplicate(s) skipped)`;
+    }
+    document.getElementById('teacherImportStatus').textContent = statusMsg;
+    showToast(`Imported ${data.length} teacher(s)!`, 'success');
   } catch (error) {
     console.error('Import teachers error:', error);
     document.getElementById('teacherImportStatus').textContent = `❌ Error: ${error.message}`;
