@@ -503,19 +503,49 @@ function downloadCSV(content, filename) {
   window.URL.revokeObjectURL(url);
 }
 
+// Pagination state for onboarding lists
+let onboardingTeachersPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
+let onboardingStudentsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 /**
- * Render teachers list
+ * Render teachers list with pagination
  */
 function renderTeachersList() {
   const container = document.getElementById('teachersListContent');
   if (!container) return;
   
-  if (onboardingData.teachers.length === 0) {
+  // Store all data for pagination
+  onboardingTeachersPaginationState.allData = onboardingData.teachers || [];
+  
+  if (onboardingTeachersPaginationState.allData.length === 0) {
     container.innerHTML = '<p style="color: #666;">No teachers added yet.</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('onboardingTeachersPagination');
+    const paginationInfo = document.getElementById('onboardingTeachersPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('onboardingTeachersItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
   
-  const html = onboardingData.teachers.map(teacher => `
+  // Paginate data
+  const paginationResult = paginateData(
+    onboardingTeachersPaginationState.allData,
+    onboardingTeachersPaginationState.currentPage,
+    onboardingTeachersPaginationState.itemsPerPage
+  );
+  
+  const html = paginationResult.data.map(teacher => `
     <div style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.5rem;">
       <strong>${teacher.name}</strong> (${teacher.email}) - ${teacher.role}
       ${teacher.class_assigned && teacher.class_assigned.length > 0 ? `<br><small>Classes: ${teacher.class_assigned.join(', ')}</small>` : ''}
@@ -523,31 +553,97 @@ function renderTeachersList() {
   `).join('');
   
   container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      onboardingTeachersPaginationState.currentPage = page;
+      renderTeachersList();
+    },
+    'onboardingTeachersPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'onboardingTeachersPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    onboardingTeachersPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      onboardingTeachersPaginationState.itemsPerPage = itemsPerPage;
+      onboardingTeachersPaginationState.currentPage = 1;
+      renderTeachersList();
+    },
+    'onboardingTeachersItemsPerPage'
+  );
 }
 
 /**
- * Render students list
+ * Render students list with pagination
  */
 function renderStudentsList() {
   const container = document.getElementById('studentsListContent');
   if (!container) return;
   
-  if (onboardingData.students.length === 0) {
+  // Store all data for pagination
+  onboardingStudentsPaginationState.allData = onboardingData.students || [];
+  
+  if (onboardingStudentsPaginationState.allData.length === 0) {
     container.innerHTML = '<p style="color: #666;">No students added yet.</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('onboardingStudentsPagination');
+    const paginationInfo = document.getElementById('onboardingStudentsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('onboardingStudentsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
   
-  const html = `<p style="color: #666; margin-bottom: 0.5rem;">Total: ${onboardingData.students.length} students</p>
-    <div style="max-height: 300px; overflow-y: auto;">
-      ${onboardingData.students.slice(0, 20).map(student => `
+  // Paginate data
+  const paginationResult = paginateData(
+    onboardingStudentsPaginationState.allData,
+    onboardingStudentsPaginationState.currentPage,
+    onboardingStudentsPaginationState.itemsPerPage
+  );
+  
+  const html = `<p style="color: #666; margin-bottom: 0.5rem;">Total: ${onboardingStudentsPaginationState.allData.length} students</p>
+    <div>
+      ${paginationResult.data.map(student => `
         <div style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.25rem; font-size: 0.9rem;">
           <strong>${student.name}</strong> - ${student.class} ${student.section} (Roll: ${student.roll})
         </div>
       `).join('')}
-      ${onboardingData.students.length > 20 ? `<p style="color: #666; font-size: 0.9rem;">... and ${onboardingData.students.length - 20} more</p>` : ''}
     </div>`;
   
   container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      onboardingStudentsPaginationState.currentPage = page;
+      renderStudentsList();
+    },
+    'onboardingStudentsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'onboardingStudentsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    onboardingStudentsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      onboardingStudentsPaginationState.itemsPerPage = itemsPerPage;
+      onboardingStudentsPaginationState.currentPage = 1;
+      renderStudentsList();
+    },
+    'onboardingStudentsItemsPerPage'
+  );
 }
 
 /**

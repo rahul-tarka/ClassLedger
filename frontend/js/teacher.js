@@ -8,6 +8,13 @@ let students = [];
 let todayAttendance = {};
 let selectedClass = null;
 
+// Pagination state for students list
+let studentsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 /**
  * Initialize teacher dashboard
  */
@@ -210,18 +217,35 @@ async function loadTodayAttendance() {
 }
 
 /**
- * Render students list
+ * Render students list with pagination
  */
 function renderStudents() {
   const container = document.getElementById('studentsList');
   if (!container) return;
   
-  if (students.length === 0) {
+  // Store all data for pagination
+  studentsPaginationState.allData = students || [];
+  
+  if (studentsPaginationState.allData.length === 0) {
     container.innerHTML = '<p class="text-center">No students found</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('teacherStudentsPagination');
+    const paginationInfo = document.getElementById('teacherStudentsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('teacherStudentsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
   
-  container.innerHTML = students.map(student => `
+  // Paginate data
+  const paginationResult = paginateData(
+    studentsPaginationState.allData,
+    studentsPaginationState.currentPage,
+    studentsPaginationState.itemsPerPage
+  );
+  
+  container.innerHTML = paginationResult.data.map(student => `
     <div class="student-item" data-student-id="${student.studentId}">
       <div class="student-info">
         <div class="student-name">${student.name}</div>
@@ -248,6 +272,34 @@ function renderStudents() {
       </div>
     </div>
   `).join('');
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      studentsPaginationState.currentPage = page;
+      renderStudents();
+    },
+    'teacherStudentsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'teacherStudentsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    studentsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      studentsPaginationState.itemsPerPage = itemsPerPage;
+      studentsPaginationState.currentPage = 1;
+      renderStudents();
+    },
+    'teacherStudentsItemsPerPage'
+  );
+  
+  // Update buttons after rendering
+  updateStudentButtons();
 }
 
 /**

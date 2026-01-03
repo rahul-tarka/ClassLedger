@@ -56,15 +56,20 @@
                 <!-- Allowed Emails List -->
                 <div>
                     <h2 style="margin-bottom: 1rem;">Current Allowed Emails/Domains</h2>
+                    <div id="allowedEmailsItemsPerPage"></div>
+                    <div id="allowedEmailsPaginationInfo"></div>
                     <div id="allowedEmailsList">
                         <p style="text-align: center; color: #666; padding: 2rem;">Loading...</p>
                     </div>
+                    <div id="allowedEmailsPagination"></div>
                 </div>
             </div>
         </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
+    <script src="js/pagination.js"></script>
     <script src="js/admin-allowed-emails.js"></script>
     <script src="js/header-scroll.js"></script>
 </body>

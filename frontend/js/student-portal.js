@@ -265,16 +265,33 @@ async function viewCorrectionRequests() {
 }
 
 /**
- * Render correction requests
+ * Render correction requests with pagination
  */
 function renderCorrectionRequests(requests) {
   const container = document.getElementById('studentPortalActions');
   if (!container) return;
   
-  if (!requests || requests.length === 0) {
+  // Store all data for pagination
+  correctionRequestsPaginationState.allData = requests || [];
+  
+  if (!correctionRequestsPaginationState.allData || correctionRequestsPaginationState.allData.length === 0) {
     container.innerHTML = '<p>No correction requests found</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('correctionRequestsPagination');
+    const paginationInfo = document.getElementById('correctionRequestsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('correctionRequestsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    correctionRequestsPaginationState.allData,
+    correctionRequestsPaginationState.currentPage,
+    correctionRequestsPaginationState.itemsPerPage
+  );
   
   let html = `
     <h4>Correction Requests</h4>
@@ -292,7 +309,7 @@ function renderCorrectionRequests(requests) {
       <tbody>
   `;
   
-  requests.forEach(request => {
+  paginationResult.data.forEach(request => {
     html += `
       <tr>
         <td>${request.date || ''}</td>
@@ -320,6 +337,31 @@ function renderCorrectionRequests(requests) {
   `;
   
   container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      correctionRequestsPaginationState.currentPage = page;
+      renderCorrectionRequests(correctionRequestsPaginationState.allData);
+    },
+    'correctionRequestsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'correctionRequestsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    correctionRequestsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      correctionRequestsPaginationState.itemsPerPage = itemsPerPage;
+      correctionRequestsPaginationState.currentPage = 1;
+      renderCorrectionRequests(correctionRequestsPaginationState.allData);
+    },
+    'correctionRequestsItemsPerPage'
+  );
 }
 
 /**

@@ -5,6 +5,13 @@
 
 let holidays = [];
 
+// Pagination state for holidays
+let holidaysPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 /**
  * Load holidays from backend (stored in Script Properties or separate sheet)
  */
@@ -90,20 +97,45 @@ async function removeHoliday(date) {
 }
 
 /**
- * Render holiday calendar
+ * Render holiday calendar with pagination
+ * @param {string} containerId - Container ID for holidays
+ * @param {number} year - Optional year (for backward compatibility)
+ * @param {number} month - Optional month (for backward compatibility)
  */
-function renderHolidayCalendar(containerId) {
+function renderHolidayCalendar(containerId, year, month) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  if (holidays.length === 0) {
+  // Store all data for pagination (flatten holidays list)
+  holidaysPaginationState.allData = holidays || [];
+  
+  if (holidaysPaginationState.allData.length === 0) {
     container.innerHTML = '<p class="text-center">No holidays configured</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('holidaysPagination');
+    const paginationInfo = document.getElementById('holidaysPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('holidaysItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
   
-  // Group by month
+  // Sort holidays by date
+  const sortedHolidays = [...holidaysPaginationState.allData].sort((a, b) => 
+    new Date(a.date) - new Date(b.date)
+  );
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    sortedHolidays,
+    holidaysPaginationState.currentPage,
+    holidaysPaginationState.itemsPerPage
+  );
+  
+  // Group paginated holidays by month
   const byMonth = {};
-  holidays.forEach(holiday => {
+  paginationResult.data.forEach(holiday => {
     const month = holiday.date.substring(0, 7); // YYYY-MM
     if (!byMonth[month]) byMonth[month] = [];
     byMonth[month].push(holiday);
@@ -139,4 +171,29 @@ function renderHolidayCalendar(containerId) {
       }).join('')}
     </div>
   `;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      holidaysPaginationState.currentPage = page;
+      renderHolidayCalendar(containerId);
+    },
+    'holidaysPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'holidaysPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    holidaysPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      holidaysPaginationState.itemsPerPage = itemsPerPage;
+      holidaysPaginationState.currentPage = 1;
+      renderHolidayCalendar(containerId);
+    },
+    'holidaysItemsPerPage'
+  );
 }

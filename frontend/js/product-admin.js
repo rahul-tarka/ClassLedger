@@ -11,6 +11,21 @@
 
 let currentUser = null;
 
+// Pagination state for schools list
+let schoolsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
+// Pagination state for school details modal (admins, principals, teachers, students)
+let schoolDetailsPaginationState = {
+  admins: { currentPage: 1, itemsPerPage: 5, allData: [] },
+  principals: { currentPage: 1, itemsPerPage: 5, allData: [] },
+  teachers: { currentPage: 1, itemsPerPage: 5, allData: [] },
+  students: { currentPage: 1, itemsPerPage: 5, allData: [] }
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await initProductAdmin();
@@ -127,16 +142,33 @@ async function loadDashboardData() {
 }
 
 /**
- * Render schools list
+ * Render schools list with pagination
  */
 function renderSchoolsList(schools) {
   const container = document.getElementById('schoolsList');
   if (!container) return;
   
-  if (schools.length === 0) {
+  // Store all data for pagination
+  schoolsPaginationState.allData = schools || [];
+  
+  if (schoolsPaginationState.allData.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">No schools yet. Add your first school!</p>';
+    // Clear pagination
+    const paginationContainer = document.getElementById('schoolsPagination');
+    const paginationInfo = document.getElementById('schoolsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('schoolsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    schoolsPaginationState.allData,
+    schoolsPaginationState.currentPage,
+    schoolsPaginationState.itemsPerPage
+  );
   
   const html = `
     <table class="schools-table">
@@ -151,7 +183,7 @@ function renderSchoolsList(schools) {
         </tr>
       </thead>
       <tbody>
-        ${schools.map(school => {
+        ${paginationResult.data.map(school => {
           // Get school admin
           const adminEmail = school.product_admin_email || 'N/A';
           
@@ -180,6 +212,31 @@ function renderSchoolsList(schools) {
   `;
   
   container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      schoolsPaginationState.currentPage = page;
+      renderSchoolsList(schoolsPaginationState.allData);
+    },
+    'schoolsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'schoolsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    schoolsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      schoolsPaginationState.itemsPerPage = itemsPerPage;
+      schoolsPaginationState.currentPage = 1;
+      renderSchoolsList(schoolsPaginationState.allData);
+    },
+    'schoolsItemsPerPage'
+  );
 }
 
 /**

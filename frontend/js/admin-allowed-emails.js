@@ -6,6 +6,13 @@
 let currentUser = null;
 let currentSchoolId = null;
 
+// Pagination state
+let allowedEmailsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await initAllowedEmails();
@@ -64,13 +71,16 @@ async function loadAllowedEmails() {
 }
 
 /**
- * Render allowed emails list
+ * Render allowed emails list with pagination
  */
 function renderAllowedEmails(emails) {
   const container = document.getElementById('allowedEmailsList');
   if (!container) return;
   
-  if (emails.length === 0) {
+  // Store all data for pagination
+  allowedEmailsPaginationState.allData = emails || [];
+  
+  if (allowedEmailsPaginationState.allData.length === 0) {
     container.innerHTML = `
       <div class="card" style="background: #fff3cd; padding: 1.5rem; text-align: center;">
         <p style="color: #856404; margin: 0;">
@@ -79,8 +89,22 @@ function renderAllowedEmails(emails) {
         </p>
       </div>
     `;
+    // Clear pagination
+    const paginationContainer = document.getElementById('allowedEmailsPagination');
+    const paginationInfo = document.getElementById('allowedEmailsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('allowedEmailsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
     return;
   }
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    allowedEmailsPaginationState.allData,
+    allowedEmailsPaginationState.currentPage,
+    allowedEmailsPaginationState.itemsPerPage
+  );
   
   const html = `
     <table style="width: 100%; border-collapse: collapse;">
@@ -93,7 +117,7 @@ function renderAllowedEmails(emails) {
         </tr>
       </thead>
       <tbody>
-        ${emails.map(email => `
+        ${paginationResult.data.map(email => `
           <tr style="border-bottom: 1px solid #ddd;">
             <td style="padding: 1rem;">
               <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; 
@@ -125,6 +149,31 @@ function renderAllowedEmails(emails) {
   `;
   
   container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      allowedEmailsPaginationState.currentPage = page;
+      renderAllowedEmails(allowedEmailsPaginationState.allData);
+    },
+    'allowedEmailsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'allowedEmailsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    allowedEmailsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      allowedEmailsPaginationState.itemsPerPage = itemsPerPage;
+      allowedEmailsPaginationState.currentPage = 1;
+      renderAllowedEmails(allowedEmailsPaginationState.allData);
+    },
+    'allowedEmailsItemsPerPage'
+  );
 }
 
 /**
