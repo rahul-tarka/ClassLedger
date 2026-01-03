@@ -91,8 +91,13 @@ BEGIN
         school_id_val := 'SCH' || LPAD(i::TEXT, 6, '0');
         
         -- 1 Principal per school
-        teacher_name := first_names[1 + (i % array_length(first_names, 1))] || ' ' || last_names[1 + (i % array_length(last_names, 1))];
-        teacher_email := LOWER(REPLACE(teacher_name, ' ', '.')) || '.principal@school' || i || '.com';
+        teacher_name := first_names[1 + ((i - 1) % array_length(first_names, 1))] || ' ' || last_names[1 + ((i - 1) % array_length(last_names, 1))];
+        teacher_email := LOWER(REPLACE(teacher_name, ' ', '.')) || '.principal' || i || '@school' || i || '.com';
+        -- Ensure email is not null
+        IF teacher_email IS NULL OR teacher_name IS NULL THEN
+            teacher_name := 'Principal ' || i;
+            teacher_email := 'principal' || i || '@school' || i || '.com';
+        END IF;
         INSERT INTO teachers (email, school_id, name, role, class_assigned, phone, active)
         VALUES (
             teacher_email,
@@ -105,8 +110,13 @@ BEGIN
         ) ON CONFLICT (email) DO NOTHING;
         
         -- 1 Admin per school
-        teacher_name := first_names[2 + (i % array_length(first_names, 1))] || ' ' || last_names[2 + (i % array_length(last_names, 1))];
-        teacher_email := LOWER(REPLACE(teacher_name, ' ', '.')) || '.admin@school' || i || '.com';
+        teacher_name := first_names[1 + (i % array_length(first_names, 1))] || ' ' || last_names[1 + (i % array_length(last_names, 1))];
+        teacher_email := LOWER(REPLACE(teacher_name, ' ', '.')) || '.admin' || i || '@school' || i || '.com';
+        -- Ensure email is not null
+        IF teacher_email IS NULL OR teacher_name IS NULL THEN
+            teacher_name := 'Admin ' || i;
+            teacher_email := 'admin' || i || '@school' || i || '.com';
+        END IF;
         INSERT INTO teachers (email, school_id, name, role, class_assigned, phone, active)
         VALUES (
             teacher_email,
@@ -120,9 +130,15 @@ BEGIN
         
         -- 20-25 Teachers per school (500 total)
         FOR j IN 1..25 LOOP
-            teacher_name := first_names[1 + ((i * 25 + j) % array_length(first_names, 1))] || ' ' || 
-                           last_names[1 + ((i * 25 + j) % array_length(last_names, 1))];
+            teacher_name := first_names[1 + ((i * 25 + j - 1) % array_length(first_names, 1))] || ' ' || 
+                           last_names[1 + ((i * 25 + j - 1) % array_length(last_names, 1))];
             teacher_email := LOWER(REPLACE(teacher_name, ' ', '.')) || j || '@school' || i || '.com';
+            
+            -- Ensure email and name are not null
+            IF teacher_email IS NULL OR teacher_name IS NULL THEN
+                teacher_name := 'Teacher ' || i || '-' || j;
+                teacher_email := 'teacher' || i || '_' || j || '@school' || i || '.com';
+            END IF;
             
             -- Assign 1-3 random classes
             class_assigned_val := ARRAY(
