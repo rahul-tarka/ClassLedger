@@ -12,21 +12,34 @@
 </head>
 <body>
     <header style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="header-content">
-            <div class="logo-container">
-                <img src="assets/logo-white.svg" alt="ClassLedger" class="header-logo">
-            </div>
-            <div class="user-info">
-                <div>
-                    <div class="user-name" id="userName" style="color: white;">Loading...</div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span class="badge" style="background: rgba(255,255,255,0.2); color: white; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.3);">
-                            👁️ Read-Only Access
-                        </span>
-                        <div class="branding" id="userRole" style="color: rgba(255,255,255,0.9);">Principal</div>
-                    </div>
+        <div class="header-top">
+            <div class="header-top-content">
+                <div class="company-info">
+                    <span>🏢 <strong>Tarka</strong> - Building Tomorrow's Education</span>
                 </div>
-                <button class="btn-logout" onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">Logout</button>
+                <div class="company-info">
+                    <span>👔 CEO: Vandana Rathod</span>
+                    <span>💻 CTO: Rahul Rathod</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-main">
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="assets/logo-white.svg" alt="ClassLedger" class="header-logo">
+                </div>
+                <div class="user-info">
+                    <div>
+                        <div class="user-name" id="userName" style="color: white;">Loading...</div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="badge" style="background: rgba(255,255,255,0.2); color: white; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.3);">
+                                👁️ Read-Only Access
+                            </span>
+                            <div class="branding" id="userRole" style="color: rgba(255,255,255,0.9);">Principal</div>
+                        </div>
+                    </div>
+                    <button class="btn-logout" onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">Logout</button>
+                </div>
             </div>
         </div>
     </header>
@@ -125,8 +138,31 @@
 
     <footer>
         <div class="footer-content">
-            <p>&copy; 2024 ClassLedger by Tarka</p>
-            <p>Powered by Tarka</p>
+            <div class="footer-main">
+                <div class="footer-section">
+                    <h4>ClassLedger</h4>
+                    <p>Secure School Attendance System</p>
+                    <p>Audit-safe, loss-proof attendance management for schools.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <p><strong>Tarka</strong></p>
+                    <p>Building Tomorrow's Education</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Leadership</h4>
+                    <p>👔 CEO: Vandana Rathod</p>
+                    <p>💻 CTO: Rahul Rathod</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-company">&copy; 2024 ClassLedger by Tarka. All rights reserved.</div>
+                <div class="footer-leadership">
+                    <span>CEO: Vandana Rathod</span>
+                    <span>•</span>
+                    <span>CTO: Rahul Rathod</span>
+                </div>
+            </div>
         </div>
     </footer>
 

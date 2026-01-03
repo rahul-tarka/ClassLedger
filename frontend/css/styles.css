@@ -4,19 +4,33 @@
  */
 
 :root {
-  --primary-color: #2563eb;
-  --primary-dark: #1e40af;
-  --secondary-color: #10b981;
+  /* Tarka Brand Colors - Professional & Modern */
+  --primary-color: #6366f1; /* Indigo - Professional & Trustworthy */
+  --primary-dark: #4f46e5;
+  --primary-light: #818cf8;
+  --secondary-color: #10b981; /* Emerald - Success & Growth */
+  --accent-color: #f59e0b; /* Amber - Energy & Innovation */
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
   --success-color: #10b981;
-  --bg-color: #f9fafb;
+  
+  /* Neutral Colors */
+  --bg-color: #f8fafc;
   --card-bg: #ffffff;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-secondary: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-hero: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+  
+  /* Shadows */
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -33,19 +47,51 @@ body {
   min-height: 100vh;
 }
 
-/* Header */
+/* Master Header - Professional Design */
 header {
-  background: var(--card-bg);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  padding: 1rem 1.5rem;
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
   position: sticky;
   top: 0;
-  z-index: 100;
-  border-bottom: 1px solid var(--border-color);
+  z-index: 1000;
+  border-bottom: none;
+}
+
+.header-top {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-top-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.company-info {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.company-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-main {
+  padding: 1rem 1.5rem;
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -60,9 +106,10 @@ header {
 }
 
 .header-logo {
-  height: 42px;
+  height: 48px;
   width: auto;
   display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 /* Legacy logo class (for backward compatibility) */
@@ -119,12 +166,25 @@ header {
 /* Homepage */
 .hero {
   text-align: center;
-  padding: 5rem 2rem;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  padding: 6rem 2rem;
+  background: var(--gradient-hero);
   color: white;
-  border-radius: 1rem;
-  margin-bottom: 3rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 1.5rem;
+  margin-bottom: 4rem;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  opacity: 0.3;
 }
 
 .hero-logo-container {
@@ -681,19 +741,74 @@ body[data-theme="dark"] {
   --border-color: #4b5563;
 }
 
-/* Footer */
+/* Master Footer - Professional Design */
 footer {
-  background: var(--card-bg);
-  padding: 2rem 1.5rem;
-  text-align: center;
-  color: var(--text-secondary);
+  background: var(--gradient-primary);
+  padding: 3rem 1.5rem 1.5rem;
   margin-top: 4rem;
-  border-top: 1px solid var(--border-color);
+  border-top: none;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .footer-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  text-align: center;
+}
+
+.footer-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.footer-section h4 {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-section p,
+.footer-section a {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  text-decoration: none;
+  line-height: 1.8;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.footer-section a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.footer-bottom {
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+}
+
+.footer-company {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.footer-leadership {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
 }
 
 /* Toast Notifications */
@@ -1032,8 +1147,29 @@ footer {
     gap: 1rem;
   }
   
+  .header-top-content {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .company-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
   .summary {
     grid-template-columns: 1fr;
+  }
+  
+  .footer-main {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .footer-leadership {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 
