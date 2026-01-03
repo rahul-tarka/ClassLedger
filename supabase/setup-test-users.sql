@@ -12,44 +12,59 @@
 
 DO $$
 DECLARE
-    product_admin_email VARCHAR := 'tarka@gmail.com';
-    product_admin_name VARCHAR := 'Rahul Rathod';
+    product_admin_email VARCHAR := 'tarka.org@gmail.com';
+    product_admin_name VARCHAR := 'Product Admin';
     
     school_admin_email VARCHAR := 'mail.rahul.rathod@gmail.com';
     school_admin_name VARCHAR := 'School Admin';
     
     school_id_val VARCHAR := 'SCH000001';  -- ⚠️ CHANGE THIS to your actual school_id if different
+    
+    product_admin_exists BOOLEAN := false;
+    school_admin_exists BOOLEAN := false;
 BEGIN
-    -- Step 1: Add Product Admin
-    INSERT INTO product_admins (email, name, active)
-    VALUES (product_admin_email, product_admin_name, true)
-    ON CONFLICT (email) DO UPDATE SET 
-        name = product_admin_name,
-        active = true;
+    -- Step 1: Check if Product Admin already exists
+    SELECT EXISTS(
+        SELECT 1 FROM product_admins WHERE email = product_admin_email
+    ) INTO product_admin_exists;
     
-    RAISE NOTICE '✅ Added Product Admin: % (%)', product_admin_email, product_admin_name;
+    IF product_admin_exists THEN
+        RAISE NOTICE '⚠️ Product Admin already exists: % - Skipping (not updated)', product_admin_email;
+    ELSE
+        -- Add Product Admin
+        INSERT INTO product_admins (email, name, active)
+        VALUES (product_admin_email, product_admin_name, true);
+        
+        RAISE NOTICE '✅ Added Product Admin: % (%)', product_admin_email, product_admin_name;
+    END IF;
     
-    -- Step 2: Add School Admin
-    -- First, check if school exists, if not we'll need to create it
-    -- For now, assuming school_id_val exists
+    -- Step 2: Check if School Admin already exists
+    SELECT EXISTS(
+        SELECT 1 FROM teachers WHERE email = school_admin_email
+    ) INTO school_admin_exists;
     
-    INSERT INTO teachers (email, school_id, name, role, class_assigned, phone, active)
-    VALUES (
-        school_admin_email,
-        school_id_val,
-        school_admin_name,
-        'admin',
-        ARRAY[]::TEXT[],
-        NULL,
-        true
-    )
-    ON CONFLICT (email) DO UPDATE SET 
-        name = school_admin_name,
-        role = 'admin',
-        school_id = school_id_val,
-        active = true;
-    
-    RAISE NOTICE '✅ Added School Admin: % (%) in School %', school_admin_email, school_admin_name, school_id_val;
+    IF school_admin_exists THEN
+        RAISE NOTICE '⚠️ School Admin already exists: % - Skipping (not updated)', school_admin_email;
+    ELSE
+        -- Check if school exists
+        IF NOT EXISTS(SELECT 1 FROM schools WHERE school_id = school_id_val) THEN
+            RAISE NOTICE '❌ School % does not exist! Please create school first or update school_id_val', school_id_val;
+        ELSE
+            -- Add School Admin
+            INSERT INTO teachers (email, school_id, name, role, class_assigned, phone, active)
+            VALUES (
+                school_admin_email,
+                school_id_val,
+                school_admin_name,
+                'admin',
+                ARRAY[]::TEXT[],
+                NULL,
+                true
+            );
+            
+            RAISE NOTICE '✅ Added School Admin: % (%) in School %', school_admin_email, school_admin_name, school_id_val;
+        END IF;
+    END IF;
     
     RAISE NOTICE '';
     RAISE NOTICE '📋 SETUP COMPLETE!';
@@ -92,7 +107,7 @@ SELECT
     NULL as school_id,
     NULL as role
 FROM product_admins 
-WHERE email = 'tarka@gmail.com'
+WHERE email = 'tarka.org@gmail.com'
 
 UNION ALL
 
