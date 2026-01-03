@@ -57,10 +57,28 @@ header {
   background: var(--header-bg);
   box-shadow: var(--shadow-lg);
   padding: 0;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   border-bottom: 2px solid var(--secondary-color);
+  transform: translateY(0);
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Hide header on scroll down */
+header.header-hidden {
+  transform: translateY(-100%);
+}
+
+/* Add padding to body to compensate for fixed header */
+body {
+  padding-top: 0;
+}
+
+body.has-fixed-header {
+  padding-top: 120px; /* Adjust based on header height */
 }
 
 .header-top {
