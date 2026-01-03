@@ -120,20 +120,42 @@ async function bulkMarkAttendance(students, status, remark = '') {
   let successCount = 0;
   let errorCount = 0;
   
+  const user = getCurrentUser();
+  const supabase = getSupabase();
+  
+  if (!supabase || !user?.schoolId) {
+    showToast('Supabase not initialized or user not found', 'error');
+    return;
+  }
+  
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toTimeString().split(' ')[0].substring(0, 5);
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  
   for (const student of students) {
     try {
-      const response = await apiPost('markAttendance', {
-        studentId: student.studentId || student.student_id,
-        status: status,
-        type: 'CHECK_IN',
-        remark: remark
-      });
+      const studentId = student.studentId || student.student_id;
+      const logId = 'LOG' + Date.now().toString() + Math.random().toString(36).substr(2, 9);
       
-      if (response.success) {
-        successCount++;
-      } else {
-        errorCount++;
-      }
+      const { error } = await supabase
+        .from('attendance_log')
+        .insert({
+          log_id: logId,
+          date: today,
+          check_in_time: now,
+          student_id: studentId,
+          school_id: user.schoolId,
+          class: student.class || '',
+          section: student.section || '',
+          status: status,
+          teacher_email: user.email,
+          remark: remark || null,
+          day_name: dayName
+        });
+      
+      if (error) throw error;
+      
+      successCount++;
     } catch (error) {
       console.error('Bulk mark error:', error);
       errorCount++;

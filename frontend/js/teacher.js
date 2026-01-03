@@ -56,16 +56,22 @@ function setupHeader() {
 async function loadSchoolInfo() {
   try {
     console.log('Loading school info...');
-    const response = await apiGet('getSchool');
-    console.log('School info response:', response);
-    if (response.success && response.data) {
-      const schoolNameEl = document.getElementById('schoolName');
-      if (schoolNameEl) {
-        schoolNameEl.textContent = response.data.schoolName;
-      }
-    } else {
-      console.error('Failed to load school info:', response);
-      showMessage('Failed to load school information', 'error');
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const { data: school, error } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .single();
+    
+    if (error) throw error;
+    
+    const schoolNameEl = document.getElementById('schoolName');
+    if (schoolNameEl && school) {
+      schoolNameEl.textContent = school.school_name;
     }
   } catch (error) {
     console.error('Load school error:', error);
@@ -123,19 +129,35 @@ async function loadStudents() {
   try {
     showLoading('studentsList');
     console.log('Loading students for class:', selectedClass);
-    const response = await apiGet('getStudents', {
-      class: selectedClass
-    });
-    console.log('Students response:', response);
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      students = response.data || [];
-      console.log('Loaded students:', students.length);
-      renderStudents();
-    } else {
-      console.error('Failed to load students:', response);
-      showMessage('Failed to load students: ' + (response.error || 'Unknown error'), 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { data: studentsData, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('class', selectedClass)
+      .eq('active', true)
+      .order('roll', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Transform to expected format
+    students = (studentsData || []).map(s => ({
+      studentId: s.student_id,
+      name: s.name,
+      class: s.class,
+      section: s.section,
+      roll: s.roll,
+      parentMobile: s.parent_mobile
+    }));
+    
+    console.log('Loaded students:', students.length);
+    renderStudents();
   } catch (error) {
     console.error('Load students error:', error);
     showMessage('Error loading students: ' + error.message, 'error');
@@ -151,15 +173,37 @@ async function loadTodayAttendance() {
   if (!selectedClass) return;
   
   try {
-    const response = await apiGet('getTodayAttendance', {
-      class: selectedClass
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const studentIds = students.map(s => s.studentId);
+    
+    const { data: logs, error } = await supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('date', today)
+      .in('student_id', studentIds);
+    
+    if (error) throw error;
+    
+    // Transform to expected format
+    todayAttendance = {};
+    (logs || []).forEach(log => {
+      todayAttendance[log.student_id] = {
+        checkIn: {
+          time: log.check_in_time || '',
+          teacherEmail: log.teacher_email || ''
+        },
+        status: log.status || 'A'
+      };
     });
     
-    if (response.success) {
-      todayAttendance = response.data || {};
-      updateSummary();
-      updateStudentButtons();
-    }
+    updateSummary();
+    updateStudentButtons();
   } catch (error) {
     console.error('Load attendance error:', error);
   }
@@ -286,27 +330,47 @@ async function markAttendance(studentId, status) {
   
   try {
     showLoading('studentsList');
-    const response = await apiPost('markAttendance', {
-      studentId: studentId,
-      status: status,
-      type: 'CHECK_IN',
-      remark: remark
-    });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Attendance marked successfully', 'success');
-      await loadTodayAttendance();
-      // Auto-save after marking
-      if (autoSave) {
-        const attendanceData = getAttendanceDataForAutoSave();
-        autoSave.save(selectedClass, attendanceData);
-      }
-    } else {
-      showToast(response.error || 'Failed to mark attendance', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date().toTimeString().split(' ')[0].substring(0, 5);
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    
+    const logId = 'LOG' + Date.now().toString();
+    
+    const { error } = await supabase
+      .from('attendance_log')
+      .insert({
+        log_id: logId,
+        date: today,
+        check_in_time: now,
+        student_id: studentId,
+        school_id: user.schoolId,
+        class: selectedClass,
+        section: students.find(s => s.studentId === studentId)?.section || '',
+        status: status,
+        teacher_email: user.email,
+        remark: remark || null,
+        day_name: dayName
+      });
+    
+    if (error) throw error;
+    
+    showToast('Attendance marked successfully', 'success');
+    await loadTodayAttendance();
+    // Auto-save after marking
+    if (autoSave) {
+      const attendanceData = getAttendanceDataForAutoSave();
+      autoSave.save(selectedClass, attendanceData);
     }
   } catch (error) {
     console.error('Mark attendance error:', error);
-    showToast('Error marking attendance', 'error');
+    showToast('Error marking attendance: ' + error.message, 'error');
   } finally {
     hideLoading('studentsList');
   }
@@ -322,21 +386,30 @@ async function editAttendance(logId, newStatus) {
   }
   
   try {
-    const response = await apiPost('editAttendance', {
-      logId: logId,
-      status: newStatus,
-      remark: remark
-    });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Attendance updated successfully', 'success');
-      await loadTodayAttendance();
-    } else {
-      showToast(response.error || 'Failed to update attendance', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('attendance_log')
+      .update({
+        status: newStatus,
+        remark: remark || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('log_id', logId)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Attendance updated successfully', 'success');
+    await loadTodayAttendance();
   } catch (error) {
     console.error('Edit attendance error:', error);
-    showToast('Error updating attendance', 'error');
+    showToast('Error updating attendance: ' + error.message, 'error');
   }
 }
 
@@ -345,22 +418,42 @@ async function editAttendance(logId, newStatus) {
  */
 async function markCheckOut(studentId) {
   try {
-    const response = await apiPost('markAttendance', {
-      studentId: studentId,
-      status: '', // No status for check-out
-      type: 'CHECK_OUT',
-      remark: ''
-    });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showMessage('Check-out recorded successfully', 'success');
-      await loadTodayAttendance();
-    } else {
-      showMessage(response.error || 'Failed to record check-out', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date().toTimeString().split(' ')[0].substring(0, 5);
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    
+    const logId = 'LOG' + Date.now().toString();
+    
+    const { error } = await supabase
+      .from('attendance_log')
+      .insert({
+        log_id: logId,
+        date: today,
+        check_in_time: now,
+        student_id: studentId,
+        school_id: user.schoolId,
+        class: selectedClass,
+        section: students.find(s => s.studentId === studentId)?.section || '',
+        status: null, // No status for check-out
+        teacher_email: user.email,
+        remark: 'CHECK_OUT',
+        day_name: dayName
+      });
+    
+    if (error) throw error;
+    
+    showMessage('Check-out recorded successfully', 'success');
+    await loadTodayAttendance();
   } catch (error) {
     console.error('Check-out error:', error);
-    showMessage('Error recording check-out', 'error');
+    showMessage('Error recording check-out: ' + error.message, 'error');
   }
 }
 

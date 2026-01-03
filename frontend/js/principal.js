@@ -86,12 +86,22 @@ function setupHeader() {
  */
 async function loadSchoolInfo() {
   try {
-    const response = await apiGet('getSchool');
-    if (response.success && response.data) {
-      const schoolNameEl = document.getElementById('schoolName');
-      if (schoolNameEl) {
-        schoolNameEl.textContent = response.data.schoolName;
-      }
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const { data: school, error } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .single();
+    
+    if (error) throw error;
+    
+    const schoolNameEl = document.getElementById('schoolName');
+    if (schoolNameEl && school) {
+      schoolNameEl.textContent = school.school_name;
     }
   } catch (error) {
     console.error('Load school error:', error);
@@ -106,39 +116,43 @@ async function loadOverviewStats() {
     // Get today's date
     const today = new Date().toISOString().split('T')[0];
     
-    // Get all classes
-    const studentsResponse = await apiGet('getStudents', {});
-    if (studentsResponse.success) {
-      const classes = [...new Set(studentsResponse.data.map(s => s.class))];
-      
-      let totalPresent = 0;
-      let totalAbsent = 0;
-      let totalLate = 0;
-      let totalStudents = 0;
-      
-      // Aggregate across all classes
-      for (const className of classes) {
-        const attendanceResponse = await apiGet('getTodayAttendance', {
-          class: className,
-          date: today
-        });
-        
-        if (attendanceResponse.success) {
-          const attendance = attendanceResponse.data || {};
-          const classStudents = studentsResponse.data.filter(s => s.class === className);
-          totalStudents += classStudents.length;
-          
-          Object.keys(attendance).forEach(studentId => {
-            const att = attendance[studentId];
-            if (att && att.checkIn) {
-              const status = att.status;
-              if (status === 'P') totalPresent++;
-              if (status === 'A') totalAbsent++;
-              if (status === 'L') totalLate++;
-            }
-          });
-        }
-      }
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    // Get all students
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('active', true);
+    
+    if (studentsError) throw studentsError;
+    
+    const classes = [...new Set((students || []).map(s => s.class))];
+    const studentIds = (students || []).map(s => s.student_id);
+    
+    // Get today's attendance
+    const { data: logs, error: logsError } = await supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('date', today)
+      .in('student_id', studentIds);
+    
+    if (logsError) throw logsError;
+    
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalLate = 0;
+    let totalStudents = students?.length || 0;
+    
+    (logs || []).forEach(log => {
+      if (log.status === 'P') totalPresent++;
+      else if (log.status === 'A') totalAbsent++;
+      else if (log.status === 'L') totalLate++;
+    });
       
       renderOverviewStats({
         totalStudents,
@@ -315,25 +329,23 @@ async function loadAllClasses() {
   try {
     console.log('Loading all classes for school...');
     
-    // Use getAllClasses endpoint
-    const response = await apiGet('getAllClasses', {});
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    // Fallback: if getAllClasses not available, get all students and extract classes
-    if (!response.success || !response.data || response.data.length === 0) {
-      console.log('getAllClasses not available, trying getStudents without class...');
-      const studentsResponse = await apiGet('getStudents', {});
-      if (studentsResponse.success && studentsResponse.data) {
-        const classes = [...new Set(studentsResponse.data.map(s => s.class))].sort();
-        populateClassDropdown(classes);
-        return;
-      }
-    }
+    if (!supabase || !user?.schoolId) return;
     
-    if (response.success && response.data) {
-      populateClassDropdown(response.data);
-    } else {
-      console.error('Failed to load classes:', response);
-    }
+    // Get all students and extract unique classes
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('class')
+      .eq('school_id', user.schoolId)
+      .eq('active', true);
+    
+    if (error) throw error;
+    
+    const classes = [...new Set((students || []).map(s => s.class))].sort();
+    populateClassDropdown(classes);
+    console.log(`✅ Populated ${classes.length} classes in dropdown`);
   } catch (error) {
     console.error('Load classes error:', error);
   }
@@ -397,41 +409,78 @@ async function loadClassReport() {
     if (absentStudentsEl) showLoading('absentStudents', 'Loading absent students...');
     if (teacherAccountabilityEl) showLoading('teacherAccountability', 'Loading teacher accountability...');
     
-    // Load students first to get WhatsApp settings
-    const studentsResponse = await apiGet('getStudents', {
-      class: selectedClass
-    });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    // Load absent students
-    const absentResponse = await apiGet('getAbsentStudents', {
-      class: selectedClass,
-      date: selectedDate
-    });
-    
-    // Load attendance data
-    const attendanceResponse = await apiGet('getTodayAttendance', {
-      class: selectedClass,
-      date: selectedDate
-    });
-    
-    if (absentResponse.success && attendanceResponse.success && studentsResponse.success) {
-      // Merge WhatsApp settings into absent students
-      const studentsMap = {};
-      (studentsResponse.data || []).forEach(s => {
-        studentsMap[s.studentId] = s;
-      });
-      
-      const absentWithSettings = (absentResponse.data || []).map(absent => ({
-        ...absent,
-        whatsappAlertEnabled: studentsMap[absent.studentId]?.whatsappAlertEnabled || false
-      }));
-      
-      renderAbsentStudents(absentWithSettings);
-      renderAttendanceStats(attendanceResponse.data || {}, 'reportContent');
-      renderTeacherAccountability(attendanceResponse.data || {});
-    } else {
-      showToast('Error loading report data', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    // Load students for this class
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('class', selectedClass)
+      .eq('active', true)
+      .order('roll', { ascending: true });
+    
+    if (studentsError) throw studentsError;
+    
+    // Load attendance for this date and class
+    const studentIds = (students || []).map(s => s.student_id);
+    const { data: logs, error: logsError } = await supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('date', selectedDate)
+      .in('student_id', studentIds);
+    
+    if (logsError) throw logsError;
+    
+    // Transform attendance data to expected format
+    const attendanceData = {};
+    const absentStudents = [];
+    
+    (students || []).forEach(s => {
+      const log = (logs || []).find(l => l.student_id === s.student_id);
+      if (log) {
+        attendanceData[s.student_id] = {
+          checkIn: {
+            time: log.check_in_time || '',
+            teacherEmail: log.teacher_email || ''
+          },
+          status: log.status || 'A'
+        };
+        
+        if (log.status === 'A') {
+          absentStudents.push({
+            studentId: s.student_id,
+            name: s.name,
+            class: s.class,
+            section: s.section,
+            roll: s.roll,
+            parentMobile: s.parent_mobile,
+            whatsappAlertEnabled: s.whatsapp_alert_enabled
+          });
+        }
+      } else {
+        // No attendance marked - consider absent
+        absentStudents.push({
+          studentId: s.student_id,
+          name: s.name,
+          class: s.class,
+          section: s.section,
+          roll: s.roll,
+          parentMobile: s.parent_mobile,
+          whatsappAlertEnabled: s.whatsapp_alert_enabled
+        });
+      }
+    });
+    
+    renderAbsentStudents(absentStudents);
+    renderAttendanceStats(attendanceData, 'reportContent');
+    renderTeacherAccountability(attendanceData);
   } catch (error) {
     console.error('Load report error:', error);
     showToast('Error loading report. Please try again.', 'error');
@@ -488,30 +537,88 @@ function setupReportRange() {
         
         try {
           showLoading('dateRangeReport', 'Generating report...');
-          const response = await apiGet('getReport', {
-            class: reportClass,
-            startDate: startDate,
-            endDate: endDate
+          const user = getCurrentUser();
+          const supabase = getSupabase();
+          
+          if (!supabase || !user?.schoolId) {
+            throw new Error('Supabase not initialized or user not found');
+          }
+          
+          // Get all students for this class
+          const { data: students, error: studentsError } = await supabase
+            .from('students')
+            .select('student_id')
+            .eq('school_id', user.schoolId)
+            .eq('class', reportClass)
+            .eq('active', true);
+          
+          if (studentsError) throw studentsError;
+          
+          const studentIds = (students || []).map(s => s.student_id);
+          
+          // Get attendance logs for date range
+          const { data: logs, error: logsError } = await supabase
+            .from('attendance_log')
+            .select('*')
+            .eq('school_id', user.schoolId)
+            .in('student_id', studentIds)
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date', { ascending: true });
+          
+          if (logsError) throw logsError;
+          
+          // Process report data
+          const summary = {
+            totalDays: 0,
+            present: 0,
+            absent: 0,
+            late: 0
+          };
+          
+          const dailyData = {};
+          const dates = new Set();
+          
+          (logs || []).forEach(log => {
+            dates.add(log.date);
+            if (!dailyData[log.date]) {
+              dailyData[log.date] = { present: 0, absent: 0, late: 0 };
+            }
+            
+            if (log.status === 'P') {
+              summary.present++;
+              dailyData[log.date].present++;
+            } else if (log.status === 'A') {
+              summary.absent++;
+              dailyData[log.date].absent++;
+            } else if (log.status === 'L') {
+              summary.late++;
+              dailyData[log.date].late++;
+            }
           });
           
-          if (response.success && response.data) {
+          summary.totalDays = dates.size;
+          
+          const report = { summary, dailyData };
+          
+          if (report) {
             // Use admin's renderDateRangeReport if available, otherwise render basic
             if (typeof renderDateRangeReport !== 'undefined' && window.renderDateRangeReport) {
               try {
-                window.renderDateRangeReport(response.data);
+                window.renderDateRangeReport(report);
                 showToast('Report generated successfully', 'success');
               } catch (error) {
                 console.error('Error rendering report with admin function:', error);
                 // Fallback to basic render
-                renderBasicDateRangeReport(response.data);
+                renderBasicDateRangeReport(report);
                 showToast('Report generated successfully', 'success');
               }
             } else {
-              renderBasicDateRangeReport(response.data);
+              renderBasicDateRangeReport(report);
               showToast('Report generated successfully', 'success');
             }
           } else {
-            showToast(response.error || 'Failed to generate report', 'error');
+            showToast('Failed to generate report', 'error');
           }
         } catch (error) {
           console.error('Generate report error:', error);
