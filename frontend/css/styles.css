@@ -4,33 +4,38 @@
  */
 
 :root {
-  /* Tarka Brand Colors - Subtle & Light for Education */
-  --primary-color: #5b8fc7; /* Soft Blue - Calm & Trustworthy */
-  --primary-dark: #4a7ba8;
-  --primary-light: #7ba3d4;
-  --secondary-color: #6b9f7a; /* Soft Green - Growth & Learning */
-  --accent-color: #d4a574; /* Soft Amber - Warm & Friendly */
-  --danger-color: #d9776b; /* Soft Red - Gentle Warning */
-  --warning-color: #d4a574;
-  --success-color: #6b9f7a;
+  /* Tarka Brand Colors - Black, Red, Blue (Professional Enterprise Style) */
+  --primary-color: #2563eb; /* Blue - Professional & Trustworthy */
+  --primary-dark: #1e40af;
+  --primary-light: #3b82f6;
+  --secondary-color: #dc2626; /* Red - Important Actions */
+  --accent-color: #1f2937; /* Dark Gray/Black - Professional */
+  --danger-color: #dc2626; /* Red - Errors & Warnings */
+  --warning-color: #f59e0b;
+  --success-color: #10b981;
   
-  /* Neutral Colors - Light & Soft */
-  --bg-color: #f5f7fa;
+  /* Neutral Colors - Professional Light/Dark */
+  --bg-color: #ffffff; /* White background like Seclore */
   --card-bg: #ffffff;
-  --text-primary: #2d3748;
-  --text-secondary: #718096;
-  --border-color: #e2e8f0;
+  --text-primary: #1f2937; /* Dark text on light */
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
   
-  /* Gradients - Subtle & Light */
-  --gradient-primary: linear-gradient(135deg, #a8c5e0 0%, #7ba3d4 100%);
-  --gradient-secondary: linear-gradient(135deg, #9fc5a8 0%, #6b9f7a 100%);
-  --gradient-hero: linear-gradient(135deg, #b8d4e8 0%, #9fc5d4 50%, #7ba3d4 100%);
+  /* Header Colors - Dark Professional (like Seclore) */
+  --header-bg: #1f2937; /* Dark header */
+  --header-text: #ffffff; /* White text on dark */
+  --header-top-bg: #111827; /* Darker top bar */
   
-  /* Shadows - Softer */
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Gradients - Professional */
+  --gradient-primary: linear-gradient(135deg, #1f2937 0%, #2563eb 100%);
+  --gradient-secondary: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  --gradient-hero: linear-gradient(135deg, #1f2937 0%, #2563eb 50%, #1e40af 100%);
+  
+  /* Shadows - Professional */
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -47,19 +52,19 @@ body {
   min-height: 100vh;
 }
 
-/* Master Header - Professional Design */
+/* Master Header - Professional Dark Design (Seclore Style) */
 header {
-  background: var(--gradient-primary);
+  background: var(--header-bg);
   box-shadow: var(--shadow-lg);
   padding: 0;
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-bottom: none;
+  border-bottom: 2px solid var(--primary-color);
 }
 
 .header-top {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--header-top-bg);
   padding: 0.5rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -71,8 +76,8 @@ header {
   justify-content: space-between;
   align-items: center;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 
 .company-info {
@@ -164,28 +169,21 @@ header {
   padding: 2rem 1.5rem;
 }
 
-/* Homepage */
+/* Homepage Hero - Professional Light Background */
 .hero {
   text-align: center;
-  padding: 6rem 2rem;
-  background: var(--gradient-hero);
-  color: white;
-  border-radius: 1.5rem;
-  margin-bottom: 4rem;
-  box-shadow: var(--shadow-xl);
+  padding: 5rem 2rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  color: var(--text-primary);
+  border-radius: 0;
+  margin-bottom: 3rem;
+  box-shadow: none;
   position: relative;
-  overflow: hidden;
+  border-bottom: 3px solid var(--primary-color);
 }
 
 .hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-  opacity: 0.3;
+  display: none;
 }
 
 .hero-logo-container {
@@ -813,13 +811,13 @@ body[data-theme="dark"] {
   --border-color: #4b5563;
 }
 
-/* Master Footer - Professional Design */
+/* Master Footer - Professional Dark Design */
 footer {
-  background: var(--gradient-primary);
+  background: var(--header-bg);
   padding: 3rem 1.5rem 1.5rem;
   margin-top: 4rem;
-  border-top: none;
-  color: rgba(255, 255, 255, 0.95);
+  border-top: 2px solid var(--primary-color);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .footer-content {

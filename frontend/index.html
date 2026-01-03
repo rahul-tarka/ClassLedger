@@ -15,11 +15,11 @@
         <div class="header-top">
             <div class="header-top-content">
                 <div class="company-info">
-                    <span>🏢 <strong>Tarka</strong> - Building Tomorrow's Education</span>
+                    <span><strong>Tarka</strong> - Building Tomorrow's Education</span>
                 </div>
                 <div class="company-info">
-                    <span>👔 CEO: Vandana Rathod</span>
-                    <span>💻 CTO: Rahul Rathod</span>
+                    <span>CEO: Vandana Rathod</span>
+                    <span style="margin-left: 1.5rem;">CTO: Rahul Rathod</span>
                 </div>
             </div>
         </div>
@@ -38,10 +38,10 @@
                 <div class="hero-logo-container">
                     <img src="assets/logo.svg" alt="ClassLedger" class="hero-logo">
                 </div>
-                <h1 class="hero-title">Secure School Attendance System</h1>
+                <h1 class="hero-title">📚 Secure School Attendance System</h1>
                 <p class="hero-description">
-                    An audit-safe, loss-proof attendance system for schools.
-                    Track attendance with confidence, ensure accountability, and maintain complete audit trails.
+                    An enterprise-grade, audit-safe attendance management platform for schools.
+                    Track attendance with confidence, ensure accountability, and maintain complete audit trails with real-time data synchronization.
                 </p>
                 <div class="btn-group">
                     <a href="login.html" class="btn btn-primary">Login as School Staff</a>
@@ -57,46 +57,50 @@
                     and all actions are tracked for accountability.
                 </p>
                 
-                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Key Features</h3>
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">🎯 Key Features</h3>
                 <ul style="line-height: 2; margin-left: 2rem;">
-                    <li><strong>Multi-School Support:</strong> Manage attendance across multiple schools</li>
-                    <li><strong>Role-Based Access:</strong> Teachers, Admins, and Principals have appropriate permissions</li>
-                    <li><strong>Real-Time Tracking:</strong> Mark attendance in real-time with instant updates</li>
-                    <li><strong>Automatic Late Detection:</strong> Students arriving after 09:15 are automatically marked late</li>
-                    <li><strong>Audit-Safe Logs:</strong> All actions are logged and cannot be deleted</li>
-                    <li><strong>Mobile-First Design:</strong> Works seamlessly on phones, tablets, and desktops</li>
-                    <li><strong>Export & Reporting:</strong> Generate reports and export data to Google Drive</li>
-                    <li><strong>Looker Studio Ready:</strong> Data formatted for easy dashboard integration</li>
+                    <li><strong>🏫 Multi-School Support:</strong> Manage attendance across multiple schools with complete data isolation</li>
+                    <li><strong>👥 Role-Based Access Control:</strong> Product Admin, School Admin, Teachers, and Principals with granular permissions</li>
+                    <li><strong>⚡ Real-Time Synchronization:</strong> Mark attendance in real-time with instant updates across all devices</li>
+                    <li><strong>⏰ Automatic Late Detection:</strong> Students arriving after 09:15 are automatically marked late</li>
+                    <li><strong>🔒 Enterprise Security:</strong> PostgreSQL database with Row-Level Security (RLS) and complete audit trails</li>
+                    <li><strong>📱 Responsive Design:</strong> Works seamlessly on phones, tablets, and desktops</li>
+                    <li><strong>📊 Advanced Reporting:</strong> Generate comprehensive reports with analytics and trends</li>
+                    <li><strong>🔐 Google OAuth Integration:</strong> Secure authentication with allowed email whitelisting</li>
                 </ul>
 
-                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">How It Works</h3>
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">🚀 How It Works</h3>
                 <ol style="line-height: 2; margin-left: 2rem;">
-                    <li>School staff login with their Google account</li>
-                    <li>Teachers mark attendance for their assigned classes</li>
-                    <li>System automatically detects late arrivals (after 09:15)</li>
-                    <li>Admins can view reports and track teacher accountability</li>
-                    <li>Principals have read-only access to all dashboards</li>
-                    <li>All data is securely stored in Google Sheets with complete audit trails</li>
+                    <li><strong>🔑 Secure Login:</strong> School staff login with their Google account (OAuth 2.0)</li>
+                    <li><strong>✏️ Mark Attendance:</strong> Teachers mark attendance for their assigned classes in real-time</li>
+                    <li><strong>⏱️ Auto-Detection:</strong> System automatically detects late arrivals (after 09:15)</li>
+                    <li><strong>📈 Analytics & Reports:</strong> Admins can view comprehensive reports and track teacher accountability</li>
+                    <li><strong>👁️ Read-Only Access:</strong> Principals have read-only access to all dashboards and reports</li>
+                    <li><strong>💾 Enterprise Database:</strong> All data is securely stored in Supabase (PostgreSQL) with complete audit trails and real-time sync</li>
                 </ol>
 
-                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Security & Compliance</h3>
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">🛡️ Security & Compliance</h3>
                 <ul style="line-height: 2; margin-left: 2rem;">
-                    <li>Google OAuth authentication ensures only authorized users can access</li>
-                    <li>Whitelist-based access control - only registered staff can login</li>
-                    <li>Append-only logs prevent data tampering</li>
-                    <li>15-minute edit window for attendance corrections</li>
-                    <li>Complete audit trail of all actions</li>
+                    <li><strong>🔐 Google OAuth 2.0:</strong> Enterprise-grade authentication ensures only authorized users can access</li>
+                    <li><strong>✅ Whitelist-Based Access:</strong> Only registered staff emails/domains can login (admin-controlled)</li>
+                    <li><strong>🔒 Row-Level Security (RLS):</strong> Database-level security policies prevent unauthorized data access</li>
+                    <li><strong>📝 Complete Audit Trail:</strong> All actions are logged with timestamps, user info, and IP addresses</li>
+                    <li><strong>⏱️ Time-Limited Edits:</strong> 15-minute edit window for attendance corrections with full audit logging</li>
+                    <li><strong>🌐 Multi-Tenant Architecture:</strong> Complete data isolation between schools with secure tenant boundaries</li>
                 </ul>
             </div>
 
             <div class="card">
-                <h2 class="card-title">System Requirements</h2>
+                <h2 class="card-title">💻 System Requirements</h2>
                 <ul style="line-height: 2; margin-left: 2rem;">
-                    <li>Google Account (for staff login)</li>
-                    <li>Google Sheets (for data storage)</li>
-                    <li>Modern web browser (Chrome, Firefox, Safari, Edge)</li>
-                    <li>Internet connection</li>
+                    <li><strong>🔑 Google Account:</strong> Required for staff login (OAuth 2.0)</li>
+                    <li><strong>🌐 Modern Web Browser:</strong> Chrome, Firefox, Safari, or Edge (latest versions)</li>
+                    <li><strong>📶 Internet Connection:</strong> Required for real-time data synchronization</li>
+                    <li><strong>📱 Device Support:</strong> Desktop, tablet, or mobile device</li>
                 </ul>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f9ff; border-left: 4px solid var(--primary-color); border-radius: 4px;">
+                    <strong>💡 Note:</strong> ClassLedger uses Supabase (PostgreSQL) for enterprise-grade data storage with real-time synchronization, automatic backups, and advanced security features.
+                </div>
             </div>
         </div>
     </main>
@@ -116,8 +120,8 @@
                 </div>
                 <div class="footer-section">
                     <h4>Leadership</h4>
-                    <p>👔 CEO: Vandana Rathod</p>
-                    <p>💻 CTO: Rahul Rathod</p>
+                    <p>CEO: Vandana Rathod</p>
+                    <p>CTO: Rahul Rathod</p>
                 </div>
             </div>
             <div class="footer-bottom">
