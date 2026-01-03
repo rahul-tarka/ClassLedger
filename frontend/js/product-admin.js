@@ -768,10 +768,82 @@ async function addStudent(schoolId) {
 }
 
 /**
- * Edit/Delete functions (simplified - can be enhanced)
+ * Edit School Admin
  */
 async function editSchoolAdmin(email, schoolId) {
-  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+  try {
+    const supabase = getSupabase();
+    const { data: admin, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('email', email)
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (error || !admin) {
+      showToast('Admin not found', 'error');
+      return;
+    }
+    
+    const name = prompt('Enter admin name:', admin.name || '');
+    if (!name) return;
+    
+    const newEmail = prompt('Enter admin email:', admin.email || '');
+    if (!newEmail) return;
+    
+    const phone = prompt('Enter admin phone (optional):', admin.phone || '') || null;
+    
+    showLoading('Updating admin...');
+    
+    const updateData = {
+      name,
+      phone,
+      updated_at: new Date().toISOString()
+    };
+    
+    // If email changed, need to handle it carefully (email is primary key)
+    if (newEmail !== email) {
+      // Check if new email already exists
+      const { data: existing } = await supabase
+        .from('teachers')
+        .select('email')
+        .eq('email', newEmail)
+        .single();
+      
+      if (existing) {
+        showToast('Email already exists. Please use a different email.', 'error');
+        hideLoading();
+        return;
+      }
+      
+      // Delete old and insert new (since email is primary key)
+      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').insert({
+        email: newEmail,
+        school_id: schoolId,
+        name,
+        role: 'admin',
+        phone,
+        class_assigned: admin.class_assigned || [],
+        active: admin.active
+      });
+    } else {
+      await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('email', email)
+        .eq('school_id', schoolId);
+    }
+    
+    showToast('Admin updated successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Edit admin error:', error);
+    showToast('Error updating admin: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function deleteSchoolAdmin(email, schoolId) {
@@ -800,8 +872,83 @@ async function deleteSchoolAdmin(email, schoolId) {
   }
 }
 
+/**
+ * Edit Principal
+ */
 async function editPrincipal(email, schoolId) {
-  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+  try {
+    const supabase = getSupabase();
+    const { data: principal, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('email', email)
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (error || !principal) {
+      showToast('Principal not found', 'error');
+      return;
+    }
+    
+    const name = prompt('Enter principal name:', principal.name || '');
+    if (!name) return;
+    
+    const newEmail = prompt('Enter principal email:', principal.email || '');
+    if (!newEmail) return;
+    
+    const phone = prompt('Enter principal phone (optional):', principal.phone || '') || null;
+    
+    showLoading('Updating principal...');
+    
+    const updateData = {
+      name,
+      phone,
+      updated_at: new Date().toISOString()
+    };
+    
+    // If email changed, need to handle it carefully (email is primary key)
+    if (newEmail !== email) {
+      // Check if new email already exists
+      const { data: existing } = await supabase
+        .from('teachers')
+        .select('email')
+        .eq('email', newEmail)
+        .single();
+      
+      if (existing) {
+        showToast('Email already exists. Please use a different email.', 'error');
+        hideLoading();
+        return;
+      }
+      
+      // Delete old and insert new (since email is primary key)
+      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').insert({
+        email: newEmail,
+        school_id: schoolId,
+        name,
+        role: 'principal',
+        phone,
+        class_assigned: principal.class_assigned || [],
+        active: principal.active
+      });
+    } else {
+      await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('email', email)
+        .eq('school_id', schoolId);
+    }
+    
+    showToast('Principal updated successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Edit principal error:', error);
+    showToast('Error updating principal: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function deletePrincipal(email, schoolId) {
@@ -830,8 +977,87 @@ async function deletePrincipal(email, schoolId) {
   }
 }
 
+/**
+ * Edit Teacher
+ */
 async function editTeacher(email, schoolId) {
-  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+  try {
+    const supabase = getSupabase();
+    const { data: teacher, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('email', email)
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (error || !teacher) {
+      showToast('Teacher not found', 'error');
+      return;
+    }
+    
+    const name = prompt('Enter teacher name:', teacher.name || '');
+    if (!name) return;
+    
+    const newEmail = prompt('Enter teacher email:', teacher.email || '');
+    if (!newEmail) return;
+    
+    const classes = prompt('Enter assigned classes (comma-separated):', (teacher.class_assigned || []).join(', ')) || '';
+    const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
+    
+    const phone = prompt('Enter teacher phone (optional):', teacher.phone || '') || null;
+    
+    showLoading('Updating teacher...');
+    
+    const updateData = {
+      name,
+      phone,
+      class_assigned: classAssigned,
+      updated_at: new Date().toISOString()
+    };
+    
+    // If email changed, need to handle it carefully (email is primary key)
+    if (newEmail !== email) {
+      // Check if new email already exists
+      const { data: existing } = await supabase
+        .from('teachers')
+        .select('email')
+        .eq('email', newEmail)
+        .single();
+      
+      if (existing) {
+        showToast('Email already exists. Please use a different email.', 'error');
+        hideLoading();
+        return;
+      }
+      
+      // Delete old and insert new (since email is primary key)
+      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').insert({
+        email: newEmail,
+        school_id: schoolId,
+        name,
+        role: 'teacher',
+        phone,
+        class_assigned: classAssigned,
+        active: teacher.active
+      });
+    } else {
+      await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('email', email)
+        .eq('school_id', schoolId);
+    }
+    
+    showToast('Teacher updated successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Edit teacher error:', error);
+    showToast('Error updating teacher: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function deleteTeacher(email, schoolId) {
@@ -860,8 +1086,66 @@ async function deleteTeacher(email, schoolId) {
   }
 }
 
+/**
+ * Edit Student
+ */
 async function editStudent(studentId, schoolId) {
-  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+  try {
+    const supabase = getSupabase();
+    const { data: student, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (error || !student) {
+      showToast('Student not found', 'error');
+      return;
+    }
+    
+    const name = prompt('Enter student name:', student.name || '');
+    if (!name) return;
+    
+    const className = prompt('Enter class:', student.class || '');
+    if (!className) return;
+    
+    const section = prompt('Enter section:', student.section || '');
+    if (!section) return;
+    
+    const roll = parseInt(prompt('Enter roll number:', student.roll || ''));
+    if (!roll) return;
+    
+    const parentName = prompt('Enter parent name (optional):', student.parent_name || '') || null;
+    const parentMobile = prompt('Enter parent mobile (optional):', student.parent_mobile || '') || null;
+    
+    showLoading('Updating student...');
+    
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({
+        name,
+        class: className,
+        section,
+        roll,
+        parent_name: parentName,
+        parent_mobile: parentMobile,
+        updated_at: new Date().toISOString()
+      })
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId);
+    
+    if (updateError) throw updateError;
+    
+    showToast('Student updated successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Edit student error:', error);
+    showToast('Error updating student: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function deleteStudent(studentId, schoolId) {

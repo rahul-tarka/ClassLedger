@@ -408,14 +408,110 @@ async function sendBulkWhatsAppAlerts() {
   const confirmed = confirm('Send WhatsApp alerts to all absent students with alerts enabled?');
   if (!confirmed) return;
   
-  showToast('Bulk alert feature coming soon. Alerts are sent automatically after 10:30 AM IST.', 'info');
+  try {
+    showLoading('Sending bulk alerts...');
+    const supabase = getSupabase();
+    const user = getCurrentUser();
+    
+    // Get today's date
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all absent students for today with alerts enabled
+    const { data: absentStudents, error } = await supabase
+      .from('attendance_log')
+      .select(`
+        student_id,
+        students!inner(
+          student_id,
+          name,
+          parent_mobile,
+          whatsapp_alert_enabled,
+          school_id
+        )
+      `)
+      .eq('date', today)
+      .eq('status', 'A')
+      .eq('students.whatsapp_alert_enabled', true)
+      .eq('students.school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    if (!absentStudents || absentStudents.length === 0) {
+      showToast('No absent students with alerts enabled found for today.', 'info');
+      return;
+    }
+    
+    // Log to whatsapp_log table
+    const logEntries = absentStudents.map(item => ({
+      student_id: item.student_id,
+      school_id: user.schoolId,
+      message: `Attendance Alert: ${item.students.name} was absent on ${today}`,
+      status: 'pending',
+      sent_at: null
+    }));
+    
+    const { error: logError } = await supabase
+      .from('whatsapp_log')
+      .insert(logEntries);
+    
+    if (logError) throw logError;
+    
+    showToast(`Bulk alerts queued for ${absentStudents.length} students. WhatsApp integration required for actual sending.`, 'success');
+  } catch (error) {
+    console.error('Bulk alert error:', error);
+    showToast('Error sending bulk alerts: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 /**
  * Send test WhatsApp alert for a student
  */
 async function sendTestAlert(studentId) {
-  showToast('Test alert feature coming soon. Use the triggerWhatsAppAbsentAlerts function in Apps Script.', 'info');
+  try {
+    showLoading('Sending test alert...');
+    const supabase = getSupabase();
+    const user = getCurrentUser();
+    
+    // Get student details
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId)
+      .single();
+    
+    if (studentError || !student) {
+      showToast('Student not found', 'error');
+      return;
+    }
+    
+    if (!student.whatsapp_alert_enabled) {
+      showToast('WhatsApp alerts are not enabled for this student.', 'warning');
+      return;
+    }
+    
+    // Log to whatsapp_log table
+    const { error: logError } = await supabase
+      .from('whatsapp_log')
+      .insert({
+        student_id: studentId,
+        school_id: user.schoolId,
+        message: `Test Alert: ${student.name} - This is a test message from ClassLedger`,
+        status: 'pending',
+        sent_at: null
+      });
+    
+    if (logError) throw logError;
+    
+    showToast(`Test alert queued for ${student.name}. WhatsApp integration required for actual sending.`, 'success');
+  } catch (error) {
+    console.error('Test alert error:', error);
+    showToast('Error sending test alert: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 /**

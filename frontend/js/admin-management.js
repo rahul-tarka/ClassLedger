@@ -379,9 +379,87 @@ async function addTeacher(teacherData) {
 /**
  * Open edit teacher modal
  */
-function openEditTeacherModal(email) {
-  // Load teacher data and show edit form
-  showToast('Edit teacher feature - coming soon', 'info');
+async function openEditTeacherModal(email) {
+  try {
+    const supabase = getSupabase();
+    const user = getCurrentUser();
+    
+    const { data: teacher, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('email', email)
+      .eq('school_id', user.schoolId)
+      .single();
+    
+    if (error || !teacher) {
+      showToast('Teacher not found', 'error');
+      return;
+    }
+    
+    const name = prompt('Enter teacher name:', teacher.name || '');
+    if (!name) return;
+    
+    const newEmail = prompt('Enter teacher email:', teacher.email || '');
+    if (!newEmail) return;
+    
+    const role = prompt('Enter role (teacher/admin/principal):', teacher.role || 'teacher') || 'teacher';
+    const classes = prompt('Enter classes (comma-separated):', (teacher.class_assigned || []).join(', ')) || '';
+    const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
+    
+    const phone = prompt('Enter phone (optional):', teacher.phone || '') || null;
+    
+    showLoading('Updating teacher...');
+    
+    const updateData = {
+      name,
+      role,
+      phone,
+      class_assigned: classAssigned,
+      updated_at: new Date().toISOString()
+    };
+    
+    // If email changed, need to handle it carefully (email is primary key)
+    if (newEmail !== email) {
+      // Check if new email already exists
+      const { data: existing } = await supabase
+        .from('teachers')
+        .select('email')
+        .eq('email', newEmail)
+        .single();
+      
+      if (existing) {
+        showToast('Email already exists. Please use a different email.', 'error');
+        hideLoading();
+        return;
+      }
+      
+      // Delete old and insert new (since email is primary key)
+      await supabase.from('teachers').delete().eq('email', email).eq('school_id', user.schoolId);
+      await supabase.from('teachers').insert({
+        email: newEmail,
+        school_id: user.schoolId,
+        name,
+        role,
+        phone,
+        class_assigned: classAssigned,
+        active: teacher.active
+      });
+    } else {
+      await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('email', email)
+        .eq('school_id', user.schoolId);
+    }
+    
+    showToast('Teacher updated successfully!', 'success');
+    await loadAllTeachersForManagement();
+  } catch (error) {
+    console.error('Edit teacher error:', error);
+    showToast('Error updating teacher: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 /**
