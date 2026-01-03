@@ -26,10 +26,10 @@
   --header-text: #ffffff; /* White text on dark */
   --header-top-bg: #111827; /* Darker top bar */
   
-  /* Gradients - Professional */
-  --gradient-primary: linear-gradient(135deg, #1f2937 0%, #2563eb 100%);
+  /* Gradients - Professional (Red Theme) */
+  --gradient-primary: linear-gradient(135deg, #1f2937 0%, #dc2626 100%);
   --gradient-secondary: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  --gradient-hero: linear-gradient(135deg, #1f2937 0%, #2563eb 50%, #1e40af 100%);
+  --gradient-hero: linear-gradient(135deg, #1f2937 0%, #dc2626 50%, #991b1b 100%);
   
   /* Shadows - Professional */
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
