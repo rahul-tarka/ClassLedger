@@ -10,17 +10,12 @@ let holidays = [];
  */
 async function loadHolidays() {
   try {
-    // For now, holidays are stored in Script Properties as JSON
+    // For now, use default holidays (can be stored in database if needed)
     // Format: [{"date":"2024-01-26","name":"Republic Day","type":"national"}]
-    // This would be implemented in backend
-    const response = await apiGet('getHolidays', {});
-    
-    if (response.success && response.data) {
-      holidays = response.data;
-    }
+    holidays = getDefaultHolidays();
   } catch (error) {
     console.error('Load holidays error:', error);
-    // Use default holidays if API fails
+    // Use default holidays if error
     holidays = getDefaultHolidays();
   }
 }
@@ -65,20 +60,11 @@ function filterHolidays(dateArray) {
  */
 async function addHoliday(date, name, type = 'general') {
   try {
-    const response = await apiPost('addHoliday', {
-      date: date,
-      name: name,
-      type: type
-    });
-    
-    if (response.success) {
-      holidays.push({ date, name, type });
-      showToast('Holiday added successfully', 'success');
-      return true;
-    } else {
-      showToast(response.error || 'Failed to add holiday', 'error');
-      return false;
-    }
+    // For now, store in localStorage (can be moved to database if needed)
+    holidays.push({ date, name, type });
+    localStorage.setItem('holidays', JSON.stringify(holidays));
+    showToast('Holiday added successfully', 'success');
+    return true;
   } catch (error) {
     console.error('Add holiday error:', error);
     showToast('Error adding holiday', 'error');
@@ -91,18 +77,11 @@ async function addHoliday(date, name, type = 'general') {
  */
 async function removeHoliday(date) {
   try {
-    const response = await apiPost('removeHoliday', {
-      date: date
-    });
-    
-    if (response.success) {
-      holidays = holidays.filter(h => h.date !== date);
-      showToast('Holiday removed successfully', 'success');
-      return true;
-    } else {
-      showToast(response.error || 'Failed to remove holiday', 'error');
-      return false;
-    }
+    // For now, store in localStorage (can be moved to database if needed)
+    holidays = holidays.filter(h => h.date !== date);
+    localStorage.setItem('holidays', JSON.stringify(holidays));
+    showToast('Holiday removed successfully', 'success');
+    return true;
   } catch (error) {
     console.error('Remove holiday error:', error);
     showToast('Error removing holiday', 'error');

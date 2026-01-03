@@ -10,13 +10,37 @@ async function loadAllStudentsForManagement() {
   try {
     showLoading('studentsList', 'Loading students...');
     const user = getCurrentUser();
-    const response = await apiGet('getAllStudents', { schoolId: user.schoolId });
+    const supabase = getSupabase();
     
-    if (response.success && response.data) {
-      renderStudentsTable(response.data);
-    } else {
-      document.getElementById('studentsList').innerHTML = '<p class="text-center">No students found</p>';
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('active', true)
+      .order('class', { ascending: true })
+      .order('section', { ascending: true })
+      .order('roll', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Transform to match expected format
+    const formattedStudents = (students || []).map(s => ({
+      studentId: s.student_id,
+      name: s.name,
+      class: s.class,
+      section: s.section,
+      roll: s.roll,
+      parentMobile: s.parent_mobile,
+      parentName: s.parent_name,
+      whatsappAlertEnabled: s.whatsapp_alert_enabled,
+      active: s.active
+    }));
+    
+    renderStudentsTable(formattedStudents);
   } catch (error) {
     console.error('Load students error:', error);
     showToast('Error loading students', 'error');
@@ -92,9 +116,28 @@ async function searchStudents() {
   
   if (!allStudentsCache.length) {
     const user = getCurrentUser();
-    const response = await apiGet('getAllStudents', { schoolId: user.schoolId });
-    if (response.success && response.data) {
-      allStudentsCache = response.data;
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('active', true);
+    
+    if (!error && students) {
+      allStudentsCache = students.map(s => ({
+        studentId: s.student_id,
+        name: s.name,
+        class: s.class,
+        section: s.section,
+        roll: s.roll,
+        parentMobile: s.parent_mobile,
+        parentName: s.parent_name,
+        whatsappAlertEnabled: s.whatsapp_alert_enabled,
+        active: s.active
+      }));
     }
   }
   
@@ -140,21 +183,37 @@ function openAddStudentModal() {
 async function addStudent(studentData) {
   try {
     const user = getCurrentUser();
-    const response = await apiPost('addStudent', {
-      schoolId: user.schoolId,
-      ...studentData
-    });
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Student added successfully', 'success');
-      await loadAllStudentsForManagement();
-      allStudentsCache = []; // Clear cache
-    } else {
-      showToast(response.error || 'Failed to add student', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const studentId = 'STU' + Date.now().toString().slice(-10);
+    
+    const { error } = await supabase
+      .from('students')
+      .insert({
+        student_id: studentId,
+        school_id: user.schoolId,
+        name: studentData.name,
+        class: studentData.class,
+        section: studentData.section,
+        roll: studentData.roll,
+        parent_mobile: studentData.parentMobile || null,
+        parent_name: studentData.parentName || null,
+        active: true,
+        whatsapp_alert_enabled: false
+      });
+    
+    if (error) throw error;
+    
+    showToast('Student added successfully', 'success');
+    await loadAllStudentsForManagement();
+    allStudentsCache = []; // Clear cache
   } catch (error) {
     console.error('Add student error:', error);
-    showToast('Error adding student', 'error');
+    showToast('Error adding student: ' + error.message, 'error');
   }
 }
 
@@ -194,21 +253,36 @@ function openEditStudentModal(studentId) {
  */
 async function updateStudent(studentId, studentData) {
   try {
-    const response = await apiPost('updateStudent', {
-      studentId,
-      ...studentData
-    });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Student updated successfully', 'success');
-      await loadAllStudentsForManagement();
-      allStudentsCache = []; // Clear cache
-    } else {
-      showToast(response.error || 'Failed to update student', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('students')
+      .update({
+        name: studentData.name,
+        class: studentData.class,
+        section: studentData.section,
+        roll: studentData.roll,
+        parent_mobile: studentData.parentMobile || null,
+        parent_name: studentData.parentName || null,
+        active: studentData.active !== 'false',
+        updated_at: new Date().toISOString()
+      })
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Student updated successfully', 'success');
+    await loadAllStudentsForManagement();
+    allStudentsCache = []; // Clear cache
   } catch (error) {
     console.error('Update student error:', error);
-    showToast('Error updating student', 'error');
+    showToast('Error updating student: ' + error.message, 'error');
   }
 }
 
@@ -221,18 +295,27 @@ async function deleteStudent(studentId) {
   }
   
   try {
-    const response = await apiPost('deleteStudent', { studentId });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Student deleted successfully', 'success');
-      await loadAllStudentsForManagement();
-      allStudentsCache = []; // Clear cache
-    } else {
-      showToast(response.error || 'Failed to delete student', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('students')
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Student deleted successfully', 'success');
+    await loadAllStudentsForManagement();
+    allStudentsCache = []; // Clear cache
   } catch (error) {
     console.error('Delete student error:', error);
-    showToast('Error deleting student', 'error');
+    showToast('Error deleting student: ' + error.message, 'error');
   }
 }
 
@@ -261,13 +344,32 @@ async function loadAllTeachersForManagement() {
   try {
     showLoading('teachersList', 'Loading teachers...');
     const user = getCurrentUser();
-    const response = await apiGet('getAllTeachers', { schoolId: user.schoolId });
+    const supabase = getSupabase();
     
-    if (response.success && response.data) {
-      renderTeachersTable(response.data);
-    } else {
-      document.getElementById('teachersList').innerHTML = '<p class="text-center">No teachers found</p>';
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { data: teachers, error } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('active', true)
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Transform to match expected format
+    const formattedTeachers = (teachers || []).map(t => ({
+      email: t.email,
+      name: t.name,
+      role: t.role,
+      classAssigned: t.class_assigned || [],
+      phone: t.phone,
+      active: t.active
+    }));
+    
+    renderTeachersTable(formattedTeachers);
   } catch (error) {
     console.error('Load teachers error:', error);
     showToast('Error loading teachers', 'error');
@@ -359,20 +461,43 @@ function openAddTeacherModal() {
 async function addTeacher(teacherData) {
   try {
     const user = getCurrentUser();
-    const response = await apiPost('addTeacher', {
-      schoolId: user.schoolId,
-      ...teacherData
-    });
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Teacher added successfully', 'success');
-      await loadAllTeachersForManagement();
-    } else {
-      showToast(response.error || 'Failed to add teacher', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    // Check if teacher already exists
+    const { data: existing } = await supabase
+      .from('teachers')
+      .select('email')
+      .eq('email', teacherData.email)
+      .single();
+    
+    if (existing) {
+      showToast('Teacher with this email already exists', 'error');
+      return;
+    }
+    
+    const { error } = await supabase
+      .from('teachers')
+      .insert({
+        email: teacherData.email,
+        school_id: user.schoolId,
+        name: teacherData.name,
+        role: teacherData.role || 'teacher',
+        class_assigned: teacherData.classAssigned || [],
+        phone: teacherData.phone || null,
+        active: true
+      });
+    
+    if (error) throw error;
+    
+    showToast('Teacher added successfully', 'success');
+    await loadAllTeachersForManagement();
   } catch (error) {
     console.error('Add teacher error:', error);
-    showToast('Error adding teacher', 'error');
+    showToast('Error adding teacher: ' + error.message, 'error');
   }
 }
 
@@ -471,17 +596,26 @@ async function deleteTeacher(email) {
   }
   
   try {
-    const response = await apiPost('deleteTeacher', { email });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Teacher deleted successfully', 'success');
-      await loadAllTeachersForManagement();
-    } else {
-      showToast(response.error || 'Failed to delete teacher', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('teachers')
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq('email', email)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Teacher deleted successfully', 'success');
+    await loadAllTeachersForManagement();
   } catch (error) {
     console.error('Delete teacher error:', error);
-    showToast('Error deleting teacher', 'error');
+    showToast('Error deleting teacher: ' + error.message, 'error');
   }
 }
 
@@ -499,13 +633,10 @@ async function saveSystemSettings() {
       editWindow: parseInt(document.getElementById('editWindow')?.value || '15')
     };
     
-    const response = await apiPost('saveSystemSettings', settings);
+    // Store in localStorage for now (can be moved to database if needed)
+    localStorage.setItem('systemSettings', JSON.stringify(settings));
     
-    if (response.success) {
-      showToast('Settings saved successfully', 'success');
-    } else {
-      showToast(response.error || 'Failed to save settings', 'error');
-    }
+    showToast('Settings saved successfully', 'success');
   } catch (error) {
     console.error('Save settings error:', error);
     showToast('Error saving settings', 'error');
@@ -517,17 +648,23 @@ async function saveSystemSettings() {
  */
 async function loadSystemSettings() {
   try {
-    const response = await apiGet('getSystemSettings', {});
+    // Load from localStorage (can be moved to database if needed)
+    const settingsStr = localStorage.getItem('systemSettings');
+    const settings = settingsStr ? JSON.parse(settingsStr) : {
+      checkInStart: '07:00',
+      checkInEnd: '10:30',
+      checkOutStart: '12:30',
+      checkOutEnd: '15:30',
+      lateThreshold: '09:15',
+      editWindow: 15
+    };
     
-    if (response.success && response.data) {
-      const settings = response.data;
-      if (document.getElementById('checkInStart')) document.getElementById('checkInStart').value = settings.checkInStart || '07:00';
-      if (document.getElementById('checkInEnd')) document.getElementById('checkInEnd').value = settings.checkInEnd || '10:30';
-      if (document.getElementById('checkOutStart')) document.getElementById('checkOutStart').value = settings.checkOutStart || '12:30';
-      if (document.getElementById('checkOutEnd')) document.getElementById('checkOutEnd').value = settings.checkOutEnd || '15:30';
-      if (document.getElementById('lateThreshold')) document.getElementById('lateThreshold').value = settings.lateThreshold || '09:15';
-      if (document.getElementById('editWindow')) document.getElementById('editWindow').value = settings.editWindow || 15;
-    }
+    if (document.getElementById('checkInStart')) document.getElementById('checkInStart').value = settings.checkInStart || '07:00';
+    if (document.getElementById('checkInEnd')) document.getElementById('checkInEnd').value = settings.checkInEnd || '10:30';
+    if (document.getElementById('checkOutStart')) document.getElementById('checkOutStart').value = settings.checkOutStart || '12:30';
+    if (document.getElementById('checkOutEnd')) document.getElementById('checkOutEnd').value = settings.checkOutEnd || '15:30';
+    if (document.getElementById('lateThreshold')) document.getElementById('lateThreshold').value = settings.lateThreshold || '09:15';
+    if (document.getElementById('editWindow')) document.getElementById('editWindow').value = settings.editWindow || 15;
   } catch (error) {
     console.error('Load settings error:', error);
   }

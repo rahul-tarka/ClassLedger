@@ -24,21 +24,32 @@ async function loadStudentPortalData() {
 async function populatePortalStudentDropdown() {
   try {
     const user = getCurrentUser();
-    const response = await apiGet('getAllStudents', { schoolId: user.schoolId });
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .eq('active', true)
+      .order('class', { ascending: true })
+      .order('section', { ascending: true })
+      .order('roll', { ascending: true });
+    
+    if (error) throw error;
     
     const select = document.getElementById('portalStudentSelect');
     if (!select) return;
     
     select.innerHTML = '<option value="">Select a student...</option>';
     
-    if (response.success && response.data) {
-      response.data.forEach(student => {
-        const option = document.createElement('option');
-        option.value = student.studentId;
-        option.textContent = `${student.name} (${student.class} ${student.section} - Roll: ${student.roll})`;
-        select.appendChild(option);
-      });
-    }
+    (students || []).forEach(student => {
+      const option = document.createElement('option');
+      option.value = student.student_id;
+      option.textContent = `${student.name} (${student.class} ${student.section} - Roll: ${student.roll})`;
+      select.appendChild(option);
+    });
   } catch (error) {
     console.error('Load portal students error:', error);
   }
@@ -59,25 +70,52 @@ async function downloadStudentCertificate() {
     
     // Get student data
     const user = getCurrentUser();
-    const studentResponse = await apiGet('getStudent', { studentId });
+    const supabase = getSupabase();
     
-    if (!studentResponse.success || !studentResponse.data) {
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
+    }
+    
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId)
+      .single();
+    
+    if (studentError || !student) {
       showToast('Student not found', 'error');
       return;
     }
     
-    const student = studentResponse.data;
-    
     // Get attendance summary
-    const attendanceResponse = await apiGet('getStudentAttendanceSummary', {
-      studentId,
-      schoolId: user.schoolId
-    });
+    const { data: logs, error: logsError } = await supabase
+      .from('attendance_log')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId);
     
-    const summary = attendanceResponse.success ? attendanceResponse.data : {};
+    const summary = {
+      totalDays: logs?.length || 0,
+      present: (logs || []).filter(l => l.status === 'P').length,
+      absent: (logs || []).filter(l => l.status === 'A').length,
+      late: (logs || []).filter(l => l.status === 'L').length,
+      attendancePercentage: logs?.length > 0 
+        ? (((logs || []).filter(l => l.status === 'P').length / logs.length) * 100).toFixed(1)
+        : 0
+    };
+    
+    // Transform student to expected format
+    const studentFormatted = {
+      studentId: student.student_id,
+      name: student.name,
+      class: student.class,
+      section: student.section,
+      roll: student.roll
+    };
     
     // Generate certificate HTML
-    const certificateHTML = generateCertificateHTML(student, summary);
+    const certificateHTML = generateCertificateHTML(studentFormatted, summary);
     
     // Create temporary element for PDF
     const tempDiv = document.createElement('div');
@@ -190,10 +228,33 @@ async function viewCorrectionRequests() {
   try {
     showLoading('studentPortalActions', 'Loading correction requests...');
     
-    const response = await apiGet('getCorrectionRequests', { studentId });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success && response.data) {
-      renderCorrectionRequests(response.data);
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
+    }
+    
+    const { data: requests, error } = await supabase
+      .from('correction_requests')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', user.schoolId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    if (requests && requests.length > 0) {
+      // Transform to expected format
+      const formattedRequests = requests.map(r => ({
+        id: r.request_id,
+        date: r.date,
+        currentStatus: r.current_status,
+        requestedStatus: r.requested_status,
+        reason: r.reason,
+        status: r.status
+      }));
+      renderCorrectionRequests(formattedRequests);
     } else {
       document.getElementById('studentPortalActions').innerHTML = '<p>No correction requests found</p>';
     }
@@ -266,17 +327,26 @@ function renderCorrectionRequests(requests) {
  */
 async function approveCorrectionRequest(requestId) {
   try {
-    const response = await apiPost('approveCorrectionRequest', { requestId });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Correction request approved', 'success');
-      await viewCorrectionRequests();
-    } else {
-      showToast(response.error || 'Failed to approve request', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('correction_requests')
+      .update({ status: 'approved', updated_at: new Date().toISOString() })
+      .eq('request_id', requestId)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Correction request approved', 'success');
+    await viewCorrectionRequests();
   } catch (error) {
     console.error('Approve request error:', error);
-    showToast('Error approving request', 'error');
+    showToast('Error approving request: ' + error.message, 'error');
   }
 }
 
@@ -289,17 +359,26 @@ async function rejectCorrectionRequest(requestId) {
   }
   
   try {
-    const response = await apiPost('rejectCorrectionRequest', { requestId });
+    const user = getCurrentUser();
+    const supabase = getSupabase();
     
-    if (response.success) {
-      showToast('Correction request rejected', 'success');
-      await viewCorrectionRequests();
-    } else {
-      showToast(response.error || 'Failed to reject request', 'error');
+    if (!supabase || !user?.schoolId) {
+      throw new Error('Supabase not initialized or user not found');
     }
+    
+    const { error } = await supabase
+      .from('correction_requests')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('request_id', requestId)
+      .eq('school_id', user.schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Correction request rejected', 'success');
+    await viewCorrectionRequests();
   } catch (error) {
     console.error('Reject request error:', error);
-    showToast('Error rejecting request', 'error');
+    showToast('Error rejecting request: ' + error.message, 'error');
   }
 }
 
