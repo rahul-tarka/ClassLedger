@@ -60,7 +60,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-bottom: 2px solid var(--primary-color);
+  border-bottom: 2px solid var(--secondary-color);
 }
 
 .header-top {
@@ -179,7 +179,7 @@ header {
   margin-bottom: 3rem;
   box-shadow: none;
   position: relative;
-  border-bottom: 3px solid var(--primary-color);
+  border-bottom: 3px solid var(--secondary-color);
 }
 
 .hero::before {
@@ -303,13 +303,13 @@ header {
 .btn-secondary {
   background: white;
   color: var(--primary-color);
-  border: 2px solid var(--primary-color);
+  border: 2px solid var(--secondary-color);
 }
 
 .btn-secondary:hover {
   background: var(--primary-color);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--secondary-color);
 }
 
 .btn-danger {
@@ -373,7 +373,7 @@ header {
 .card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
-  border-color: var(--primary-light);
+  border-color: var(--secondary-color);
 }
 
 .card:hover::before {
@@ -424,14 +424,14 @@ header {
 .form-input:focus,
 .form-select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
   transform: translateY(-1px);
 }
 
 .form-input:hover,
 .form-select:hover {
-  border-color: var(--primary-light);
+  border-color: var(--secondary-color);
 }
 
 .form-textarea {
@@ -458,7 +458,7 @@ header {
 
 .student-item:hover {
   box-shadow: var(--shadow);
-  border-color: var(--primary-color);
+  border-color: var(--secondary-color);
 }
 
 .student-info {
@@ -511,7 +511,7 @@ header {
 }
 
 .btn-attendance.active {
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
 }
 
 /* Summary */
@@ -549,7 +549,7 @@ header {
 .summary-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary-light);
+  border-color: var(--secondary-color);
 }
 
 .summary-card:hover::before {
@@ -607,7 +607,7 @@ header {
 
 .spinner {
   border: 3px solid var(--border-color);
-  border-top: 3px solid var(--primary-color);
+  border-top: 3px solid var(--secondary-color);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -652,7 +652,7 @@ header {
   width: 16px;
   height: 16px;
   border: 2px solid var(--border-color);
-  border-top: 2px solid var(--primary-color);
+  border-top: 2px solid var(--secondary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -703,7 +703,7 @@ header {
 .alert-info {
   background: #dbeafe;
   color: #1e40af;
-  border: 1px solid #2563eb;
+  border: 1px solid var(--secondary-color);
 }
 
 /* Modal */
@@ -827,7 +827,7 @@ footer {
   background: var(--header-bg);
   padding: 3rem 1.5rem 1.5rem;
   margin-top: 4rem;
-  border-top: 2px solid var(--primary-color);
+  border-top: 2px solid var(--secondary-color);
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -956,7 +956,7 @@ footer {
 }
 
 .toast-info {
-  border-left: 4px solid var(--primary-color);
+  border-left: 4px solid var(--secondary-color);
 }
 
 .toast-info .toast-icon {
