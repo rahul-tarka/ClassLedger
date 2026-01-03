@@ -16,6 +16,13 @@ let teachersPaginationState = {
   filteredData: []
 };
 
+// Pagination state for allowed emails (teachers)
+let teacherAllowedEmailsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 /**
  * Load all students for management
  */
@@ -923,6 +930,254 @@ async function loadSystemSettings() {
   }
 }
 
+/**
+ * Load allowed emails for teachers
+ */
+async function loadTeacherAllowedEmails() {
+  try {
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    if (!supabase || !user?.schoolId) return;
+    
+    const { data: allowedEmails, error } = await supabase
+      .from('school_allowed_emails')
+      .select('*')
+      .eq('school_id', user.schoolId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    renderTeacherAllowedEmails(allowedEmails || []);
+  } catch (error) {
+    console.error('Load teacher allowed emails error:', error);
+    showToast('Error loading allowed emails', 'error');
+  }
+}
+
+/**
+ * Render allowed emails list with pagination
+ */
+function renderTeacherAllowedEmails(emails) {
+  const container = document.getElementById('teacherAllowedEmailsList');
+  if (!container) return;
+  
+  // Store all data for pagination
+  teacherAllowedEmailsPaginationState.allData = emails || [];
+  
+  if (teacherAllowedEmailsPaginationState.allData.length === 0) {
+    container.innerHTML = `
+      <div class="card" style="background: #fff3cd; padding: 1.5rem; text-align: center;">
+        <p style="color: #856404; margin: 0;">
+          <strong>No allowed emails defined.</strong><br>
+          Add email addresses or domains to allow teachers and principals to login.
+        </p>
+      </div>
+    `;
+    // Clear pagination
+    const paginationContainer = document.getElementById('teacherAllowedEmailsPagination');
+    const paginationInfo = document.getElementById('teacherAllowedEmailsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('teacherAllowedEmailsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
+    return;
+  }
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    teacherAllowedEmailsPaginationState.allData,
+    teacherAllowedEmailsPaginationState.currentPage,
+    teacherAllowedEmailsPaginationState.itemsPerPage
+  );
+  
+  const html = `
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: #f5f5f5;">
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Type</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Email/Domain</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Status</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${paginationResult.data.map(email => `
+          <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 1rem;">
+              <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; 
+                           background: ${email.type === 'email' ? '#e3f2fd' : '#f3e5f5'}; 
+                           color: ${email.type === 'email' ? '#1976d2' : '#7b1fa2'};">
+                ${email.type === 'email' ? 'Email' : 'Domain'}
+              </span>
+            </td>
+            <td style="padding: 1rem; font-family: monospace;">${email.email_pattern}</td>
+            <td style="padding: 1rem;">
+              <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;
+                           background: ${email.active ? '#4CAF50' : '#f44336'}; 
+                           color: white;">
+                ${email.active ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+            <td style="padding: 1rem;">
+              <button class="btn btn-secondary" onclick="toggleTeacherEmailStatus(${email.id}, ${!email.active})" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                ${email.active ? 'Deactivate' : 'Activate'}
+              </button>
+              <button class="btn btn-danger" onclick="deleteTeacherEmail(${email.id})" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; margin-left: 0.5rem;">
+                Delete
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      teacherAllowedEmailsPaginationState.currentPage = page;
+      renderTeacherAllowedEmails(teacherAllowedEmailsPaginationState.allData);
+    },
+    'teacherAllowedEmailsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'teacherAllowedEmailsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    teacherAllowedEmailsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      teacherAllowedEmailsPaginationState.itemsPerPage = itemsPerPage;
+      teacherAllowedEmailsPaginationState.currentPage = 1;
+      renderTeacherAllowedEmails(teacherAllowedEmailsPaginationState.allData);
+    },
+    'teacherAllowedEmailsItemsPerPage'
+  );
+}
+
+/**
+ * Handle add teacher email form submission
+ */
+async function handleAddTeacherEmail(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  
+  const form = document.getElementById('addTeacherEmailForm');
+  if (!form) return;
+  
+  const formData = new FormData(form);
+  const emailPattern = formData.get('emailPattern')?.trim();
+  const type = formData.get('emailType');
+  
+  // Validate
+  if (type === 'domain' && !emailPattern.startsWith('@')) {
+    showToast('Domain must start with @ (e.g., @school.com)', 'error');
+    return;
+  }
+  
+  if (type === 'email' && !emailPattern.includes('@')) {
+    showToast('Please enter a valid email address', 'error');
+    return;
+  }
+  
+  try {
+    showLoading('teacherAllowedEmailsList', 'Adding to allowed list...');
+    
+    const user = getCurrentUser();
+    const supabase = getSupabase();
+    
+    const { data, error } = await supabase
+      .from('school_allowed_emails')
+      .insert({
+        school_id: user.schoolId,
+        email_pattern: emailPattern,
+        type: type,
+        active: true,
+        created_by: user.email
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    // Reload list
+    await loadTeacherAllowedEmails();
+    
+    // Reset form
+    form.reset();
+    
+    showToast('Email/domain added successfully!', 'success');
+  } catch (error) {
+    console.error('Add teacher email error:', error);
+    if (error.code === '23505') { // Unique constraint violation
+      showToast('This email/domain is already in the list', 'error');
+    } else {
+      showToast('Error adding email: ' + error.message, 'error');
+    }
+  } finally {
+    hideLoading('teacherAllowedEmailsList');
+  }
+}
+
+/**
+ * Toggle teacher email status
+ */
+async function toggleTeacherEmailStatus(id, newStatus) {
+  try {
+    showLoading('teacherAllowedEmailsList', 'Updating status...');
+    
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('school_allowed_emails')
+      .update({ active: newStatus })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    await loadTeacherAllowedEmails();
+    showToast('Status updated successfully!', 'success');
+  } catch (error) {
+    console.error('Toggle teacher email status error:', error);
+    showToast('Error updating status', 'error');
+  } finally {
+    hideLoading('teacherAllowedEmailsList');
+  }
+}
+
+/**
+ * Delete teacher email
+ */
+async function deleteTeacherEmail(id) {
+  if (!confirm('Are you sure you want to remove this email/domain from the allowed list?')) {
+    return;
+  }
+  
+  try {
+    showLoading('teacherAllowedEmailsList', 'Deleting...');
+    
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('school_allowed_emails')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    await loadTeacherAllowedEmails();
+    showToast('Deleted successfully!', 'success');
+  } catch (error) {
+    console.error('Delete teacher email error:', error);
+    showToast('Error deleting email', 'error');
+  } finally {
+    hideLoading('teacherAllowedEmailsList');
+  }
+}
+
 // Initialize on page load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -930,6 +1185,13 @@ if (document.readyState === 'loading') {
       loadAllStudentsForManagement();
       loadAllTeachersForManagement();
       loadSystemSettings();
+      loadTeacherAllowedEmails();
+      
+      // Setup form handler
+      const form = document.getElementById('addTeacherEmailForm');
+      if (form) {
+        form.addEventListener('submit', handleAddTeacherEmail);
+      }
     }
   });
 } else {
@@ -937,6 +1199,13 @@ if (document.readyState === 'loading') {
     loadAllStudentsForManagement();
     loadAllTeachersForManagement();
     loadSystemSettings();
+    loadTeacherAllowedEmails();
+    
+    // Setup form handler
+    const form = document.getElementById('addTeacherEmailForm');
+    if (form) {
+      form.addEventListener('submit', handleAddTeacherEmail);
+    }
   }
 }
 

@@ -225,6 +225,53 @@
                 </div>
             </div>
 
+            <!-- Allowed Emails Management (For Teachers) -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Allowed Emails for Teachers</h3>
+                </div>
+                <div id="allowedEmailsManagement">
+                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                        Define which email addresses or domains can login as teachers and principals.
+                    </p>
+                    
+                    <!-- Add Email Form -->
+                    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin-bottom: 1rem;">Add Allowed Email/Domain</h4>
+                        <form id="addTeacherEmailForm">
+                            <div class="form-group">
+                                <label class="form-label" for="teacherEmailType">Type *</label>
+                                <select id="teacherEmailType" name="emailType" class="form-select" required>
+                                    <option value="email">Specific Email</option>
+                                    <option value="domain">Email Domain</option>
+                                </select>
+                                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                                    <strong>Email:</strong> Specific email (e.g., teacher@school.com)<br>
+                                    <strong>Domain:</strong> All emails from domain (e.g., @school.com)
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="teacherEmailPattern">Email or Domain *</label>
+                                <input type="text" id="teacherEmailPattern" name="emailPattern" class="form-input" required 
+                                       placeholder="teacher@school.com or @school.com">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add to Allowed List</button>
+                        </form>
+                    </div>
+
+                    <!-- Allowed Emails List -->
+                    <div>
+                        <h4 style="margin-bottom: 1rem;">Current Allowed Emails/Domains</h4>
+                        <div id="teacherAllowedEmailsItemsPerPage"></div>
+                        <div id="teacherAllowedEmailsPaginationInfo"></div>
+                        <div id="teacherAllowedEmailsList">
+                            <p style="text-align: center; color: #666; padding: 2rem;">Loading...</p>
+                        </div>
+                        <div id="teacherAllowedEmailsPagination"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Student Portal Management -->
             <div class="card">
                 <div class="card-header">

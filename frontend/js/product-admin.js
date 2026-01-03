@@ -26,6 +26,13 @@ let schoolDetailsPaginationState = {
   students: { currentPage: 1, itemsPerPage: 5, allData: [] }
 };
 
+// Pagination state for school admin allowed emails
+let schoolAdminAllowedEmailsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
+  allData: []
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await initProductAdmin();
@@ -81,10 +88,18 @@ async function initProductAdmin() {
     // Load dashboard data
     await loadDashboardData();
     
-    // Setup form handler
+    // Load school admin allowed emails
+    await loadSchoolAdminAllowedEmails();
+    
+    // Setup form handlers
     const form = document.getElementById('addSchoolForm');
     if (form) {
       form.addEventListener('submit', handleAddSchool);
+    }
+    
+    const emailForm = document.getElementById('addSchoolAdminEmailForm');
+    if (emailForm) {
+      emailForm.addEventListener('submit', handleAddSchoolAdminEmail);
     }
   } catch (error) {
     console.error('Init product admin error:', error);
@@ -1248,6 +1263,152 @@ async function logout() {
   }
   sessionStorage.clear();
   window.location.href = 'login.html';
+}
+
+/**
+ * Load allowed emails for school admins
+ * Product Admin can see all school admin emails across all schools
+ */
+async function loadSchoolAdminAllowedEmails() {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    
+    // Get all school admins (role = 'admin') from all schools
+    const { data: schoolAdmins, error } = await supabase
+      .from('teachers')
+      .select('email, name, school_id, active, created_at, schools(school_name)')
+      .eq('role', 'admin')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Transform to allowed emails format
+    const allowedEmails = (schoolAdmins || []).map(admin => ({
+      id: admin.email, // Use email as ID for display
+      email_pattern: admin.email,
+      type: 'email',
+      active: admin.active,
+      school_id: admin.school_id,
+      school_name: admin.schools?.school_name || 'N/A',
+      name: admin.name,
+      created_at: admin.created_at
+    }));
+    
+    renderSchoolAdminAllowedEmails(allowedEmails);
+  } catch (error) {
+    console.error('Load school admin allowed emails error:', error);
+    showToast('Error loading school admin emails', 'error');
+  }
+}
+
+/**
+ * Render school admin allowed emails list with pagination
+ */
+function renderSchoolAdminAllowedEmails(emails) {
+  const container = document.getElementById('schoolAdminAllowedEmailsList');
+  if (!container) return;
+  
+  // Store all data for pagination
+  schoolAdminAllowedEmailsPaginationState.allData = emails || [];
+  
+  if (schoolAdminAllowedEmailsPaginationState.allData.length === 0) {
+    container.innerHTML = `
+      <div class="card" style="background: #fff3cd; padding: 1.5rem; text-align: center;">
+        <p style="color: #856404; margin: 0;">
+          <strong>No school admins found.</strong><br>
+          School admins are created when you add a new school.
+        </p>
+      </div>
+    `;
+    // Clear pagination
+    const paginationContainer = document.getElementById('schoolAdminAllowedEmailsPagination');
+    const paginationInfo = document.getElementById('schoolAdminAllowedEmailsPaginationInfo');
+    const itemsPerPageSelector = document.getElementById('schoolAdminAllowedEmailsItemsPerPage');
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (paginationInfo) paginationInfo.innerHTML = '';
+    if (itemsPerPageSelector) itemsPerPageSelector.innerHTML = '';
+    return;
+  }
+  
+  // Paginate data
+  const paginationResult = paginateData(
+    schoolAdminAllowedEmailsPaginationState.allData,
+    schoolAdminAllowedEmailsPaginationState.currentPage,
+    schoolAdminAllowedEmailsPaginationState.itemsPerPage
+  );
+  
+  const html = `
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: #f5f5f5;">
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Name</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Email</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">School</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Status</th>
+          <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #ddd;">Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${paginationResult.data.map(email => `
+          <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 1rem;">${email.name || 'N/A'}</td>
+            <td style="padding: 1rem; font-family: monospace;">${email.email_pattern}</td>
+            <td style="padding: 1rem;">${email.school_name}</td>
+            <td style="padding: 1rem;">
+              <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;
+                           background: ${email.active ? '#4CAF50' : '#f44336'}; 
+                           color: white;">
+                ${email.active ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+            <td style="padding: 1rem;">${new Date(email.created_at).toLocaleDateString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  container.innerHTML = html;
+  
+  // Render pagination controls
+  createPagination(
+    paginationResult.currentPage,
+    paginationResult.totalPages,
+    (page) => {
+      schoolAdminAllowedEmailsPaginationState.currentPage = page;
+      renderSchoolAdminAllowedEmails(schoolAdminAllowedEmailsPaginationState.allData);
+    },
+    'schoolAdminAllowedEmailsPagination'
+  );
+  
+  // Render pagination info
+  createPaginationInfo(paginationResult, 'schoolAdminAllowedEmailsPaginationInfo');
+  
+  // Render items per page selector
+  createItemsPerPageSelector(
+    schoolAdminAllowedEmailsPaginationState.itemsPerPage,
+    (itemsPerPage) => {
+      schoolAdminAllowedEmailsPaginationState.itemsPerPage = itemsPerPage;
+      schoolAdminAllowedEmailsPaginationState.currentPage = 1;
+      renderSchoolAdminAllowedEmails(schoolAdminAllowedEmailsPaginationState.allData);
+    },
+    'schoolAdminAllowedEmailsItemsPerPage'
+  );
+}
+
+/**
+ * Handle add school admin email form submission
+ * Note: School admins are created when adding a school, not separately
+ */
+async function handleAddSchoolAdminEmail(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  
+  showToast('School admins are created when you add a new school. Use "Add School" button to create a new school admin.', 'info');
+  
+  // Reset form
+  const form = document.getElementById('addSchoolAdminEmailForm');
+  if (form) form.reset();
 }
 
 /**

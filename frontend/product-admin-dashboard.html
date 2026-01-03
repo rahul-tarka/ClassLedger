@@ -132,6 +132,51 @@
                 </div>
             </div>
 
+            <!-- Allowed Emails Management (For School Admins) -->
+            <div class="card">
+                <h2 style="margin-bottom: 1rem;">Allowed Emails for School Admins</h2>
+                <div id="schoolAdminAllowedEmailsManagement">
+                    <p style="margin-bottom: 1rem; color: #666;">
+                        Define which email addresses or domains can login as school admins.
+                    </p>
+                    
+                    <!-- Add Email Form -->
+                    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem;">Add Allowed Email/Domain</h3>
+                        <form id="addSchoolAdminEmailForm">
+                            <div class="form-group">
+                                <label for="schoolAdminEmailType">Type *</label>
+                                <select id="schoolAdminEmailType" name="emailType" required>
+                                    <option value="email">Specific Email</option>
+                                    <option value="domain">Email Domain</option>
+                                </select>
+                                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                                    <strong>Email:</strong> Specific email (e.g., admin@school.com)<br>
+                                    <strong>Domain:</strong> All emails from domain (e.g., @school.com)
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="schoolAdminEmailPattern">Email or Domain *</label>
+                                <input type="text" id="schoolAdminEmailPattern" name="emailPattern" required 
+                                       placeholder="admin@school.com or @school.com">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add to Allowed List</button>
+                        </form>
+                    </div>
+
+                    <!-- Allowed Emails List -->
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">Current Allowed Emails/Domains</h3>
+                        <div id="schoolAdminAllowedEmailsItemsPerPage"></div>
+                        <div id="schoolAdminAllowedEmailsPaginationInfo"></div>
+                        <div id="schoolAdminAllowedEmailsList">
+                            <p style="text-align: center; color: #666; padding: 2rem;">Loading...</p>
+                        </div>
+                        <div id="schoolAdminAllowedEmailsPagination"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Schools List -->
             <div class="card">
                 <h2 style="margin-bottom: 1rem;">All Schools</h2>
