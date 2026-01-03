@@ -73,6 +73,17 @@ function createPagination(currentPage, totalPages, onPageChange, containerId) {
   html += '</div>';
   
   container.innerHTML = html;
+  
+  // Make pagination buttons touch-friendly on mobile
+  if (window.innerWidth <= 767) {
+    const buttons = container.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.style.minWidth = '44px';
+      btn.style.minHeight = '44px';
+      btn.style.padding = '0.625rem 0.875rem';
+      btn.style.fontSize = '0.875rem';
+    });
+  }
 }
 
 /**
@@ -104,11 +115,13 @@ function createItemsPerPageSelector(currentValue, onChange, containerId) {
   
   const options = [10, 25, 50, 100];
   
+  const isMobile = window.innerWidth <= 767;
+  
   container.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-      <label style="font-size: 0.875rem; color: var(--text-secondary);">Items per page:</label>
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; ${isMobile ? 'flex-direction: column; align-items: stretch;' : ''}">
+      <label style="font-size: 0.875rem; color: var(--text-secondary); ${isMobile ? 'margin-bottom: 0.5rem;' : ''}">Items per page:</label>
       <select onchange="${onChange}(parseInt(this.value))" 
-              style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 0.25rem; background: white;">
+              style="padding: ${isMobile ? '0.75rem' : '0.5rem'}; border: 1px solid var(--border-color); border-radius: 0.25rem; background: white; min-height: 44px; font-size: 16px; width: ${isMobile ? '100%' : 'auto'};">
         ${options.map(opt => `
           <option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>
         `).join('')}
@@ -126,8 +139,10 @@ function createPaginationInfo(paginationResult, containerId) {
   
   const { startIndex, endIndex, totalItems, currentPage, totalPages } = paginationResult;
   
+  const isMobile = window.innerWidth <= 767;
+  
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 0.75rem; background: var(--bg-color); border-radius: 0.25rem; font-size: 0.875rem; color: var(--text-secondary);">
+    <div style="display: flex; ${isMobile ? 'flex-direction: column; gap: 0.5rem; text-align: center;' : 'justify-content: space-between; align-items: center;'} margin-top: 1rem; padding: 0.75rem; background: var(--bg-color); border-radius: 0.25rem; font-size: 0.875rem; color: var(--text-secondary);">
       <span>Showing <strong>${startIndex}</strong> to <strong>${endIndex}</strong> of <strong>${totalItems}</strong> items</span>
       <span>Page <strong>${currentPage}</strong> of <strong>${totalPages}</strong></span>
     </div>

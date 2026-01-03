@@ -640,6 +640,13 @@ function renderTeachersTable(teachers) {
   `;
   
   container.innerHTML = html;
+  
+  // Convert to mobile cards if needed
+  setTimeout(() => {
+    if (typeof convertTableToCards === 'function') {
+      convertTableToCards('teachersList', 'mobile-card-teachers');
+    }
+  }, 100);
 }
 
 /**

@@ -476,6 +476,13 @@ function renderAbsentStudents(absentStudents) {
     'changeAbsentStudentsPage',
     'absentStudentsPagination'
   );
+  
+  // Convert to mobile cards if needed
+  setTimeout(() => {
+    if (typeof convertTableToCards === 'function') {
+      convertTableToCards('absentStudents', 'mobile-card-absent');
+    }
+  }, 100);
 }
 
 /**
@@ -798,6 +805,13 @@ function renderTeacherAccountability(attendanceData) {
     'changeTeacherAccountabilityPage',
     'teacherAccountabilityPagination'
   );
+  
+  // Convert to mobile cards if needed
+  setTimeout(() => {
+    if (typeof convertTableToCards === 'function') {
+      convertTableToCards('teacherAccountability', 'mobile-card-accountability');
+    }
+  }, 100);
 }
 
 /**

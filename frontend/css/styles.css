@@ -272,7 +272,7 @@ header .header-logo[src*="logo.svg"]:not([src*="logo-white"]) {
   flex-wrap: wrap;
 }
 
-/* Buttons - Enhanced Design */
+/* Buttons - Enhanced Design (Touch-Friendly) */
 .btn {
   padding: 0.875rem 2rem;
   border: none;
@@ -287,6 +287,9 @@ header .header-logo[src*="logo.svg"]:not([src*="logo-white"]) {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow);
+  min-height: 44px; /* Touch-friendly minimum */
+  min-width: 44px;
+  touch-action: manipulation; /* Prevent double-tap zoom */
 }
 
 .btn::before {
@@ -435,10 +438,13 @@ header .header-logo[src*="logo.svg"]:not([src*="logo-white"]) {
   padding: 0.875rem 1rem;
   border: 2px solid var(--border-color);
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 16px; /* Prevent zoom on iOS */
   transition: all 0.3s ease;
   background: var(--card-bg);
   color: var(--text-primary);
+  min-height: 44px; /* Touch-friendly */
+  -webkit-appearance: none; /* Remove iOS styling */
+  appearance: none;
 }
 
 .form-input:focus,
@@ -1290,66 +1296,419 @@ footer {
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* ============================================
+   MOBILE-FIRST RESPONSIVE DESIGN
+   ============================================ */
+
+/* Base styles are mobile-first, then enhanced for larger screens */
+
+/* Touch-friendly minimum sizes */
+button, .btn, a.btn, input[type="button"], input[type="submit"] {
+  min-height: 44px; /* iOS recommended touch target */
+  min-width: 44px;
+  touch-action: manipulation; /* Prevent double-tap zoom */
+}
+
+/* Mobile: 320px - 767px */
+@media (max-width: 767px) {
+  /* Typography */
+  body {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
   .hero h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
+    line-height: 1.3;
   }
   
   .hero .subtitle {
+    font-size: 1.125rem;
+  }
+  
+  .hero-title {
+    font-size: 1.75rem;
+  }
+  
+  .card-title {
     font-size: 1.25rem;
   }
   
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+  }
+  
+  /* Header - Mobile Optimized */
+  .header-top {
+    padding: 0.5rem 1rem;
+    display: none; /* Hide top bar on mobile to save space */
+  }
+  
+  .header-main {
+    padding: 0.75rem 1rem;
+  }
+  
+  .header-content {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .header-logo {
+    height: 36px; /* Smaller logo on mobile */
+  }
+  
+  .user-info {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .user-name {
+    font-size: 0.875rem;
+  }
+  
+  .btn-logout {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    width: 100%;
+    max-width: 120px;
+  }
+  
+  /* Container & Spacing */
   .container {
-    padding: 1rem;
+    padding: 1rem 0.75rem;
   }
   
   .card {
     padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
   }
   
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Forms - Mobile Friendly */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  
+  .form-input,
+  .form-select {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: 0.375rem;
+    min-height: 44px;
+  }
+  
+  /* Buttons - Touch Friendly */
+  .btn {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9375rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    min-height: 44px;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    width: 100%;
+  }
+  
+  .btn-sm {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    min-height: 40px;
+  }
+  
+  /* Tables - Convert to Cards on Mobile */
+  .table-container {
+    overflow-x: visible;
+  }
+  
+  table.table {
+    display: none; /* Hide table on mobile */
+  }
+  
+  /* Card-based table for mobile */
+  .table-container::before {
+    content: '';
+    display: block;
+  }
+  
+  /* Summary Cards */
+  .summary {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .summary-card {
+    padding: 1rem;
+  }
+  
+  .summary-value {
+    font-size: 1.5rem;
+  }
+  
+  /* Student/Teacher Items */
   .student-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
   }
   
   .attendance-buttons {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
   .btn-attendance {
     flex: 1;
+    width: 100%;
+    padding: 0.875rem;
+    min-height: 48px;
+    font-size: 0.9375rem;
   }
   
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
+  /* Pagination - Mobile Friendly */
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.75rem;
   }
   
-  .header-top-content {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
+  .pagination button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
   
-  .company-info {
-    flex-direction: column;
-    gap: 0.5rem;
+  /* Modals - Mobile Full Screen */
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 1.5rem 1rem;
+    margin: 0;
   }
   
-  .summary {
-    grid-template-columns: 1fr;
+  /* Toast - Mobile Position */
+  .toast {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: 100%;
+    min-width: auto;
   }
   
+  /* Footer - Mobile */
   .footer-main {
     grid-template-columns: 1fr;
+    text-align: center;
+    gap: 2rem;
+  }
+  
+  .footer-section {
     text-align: center;
   }
   
   .footer-leadership {
     flex-direction: column;
     gap: 0.5rem;
+  }
+  
+  /* Hero - Mobile */
+  .hero {
+    padding: 3rem 1rem;
+  }
+  
+  .hero-logo {
+    height: 60px;
+  }
+  
+  .hero-description {
+    font-size: 1rem;
+    padding: 0 0.5rem;
+  }
+  
+  /* Search & Filters - Mobile Stack */
+  .form-group input[type="text"],
+  .form-group select {
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Badges - Mobile */
+  .badge {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  /* Grid Layouts - Single Column */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  /* Card Actions - Stack on Mobile */
+  .card-header > div:last-child {
+    width: 100%;
+  }
+  
+  .card-header button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Tablet: 768px - 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding: 1.5rem;
+  }
+  
+  .card {
+    padding: 1.25rem;
+  }
+  
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .header-top {
+    padding: 0.5rem 1.25rem;
+  }
+  
+  .header-main {
+    padding: 1rem 1.25rem;
+  }
+  
+  .btn {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  table.table {
+    display: table; /* Show table on tablet */
+  }
+}
+
+/* Desktop: 1024px+ */
+@media (min-width: 1024px) {
+  .container {
+    padding: 2rem 1.5rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+  }
+  
+  .summary {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .btn {
+    width: auto;
+    margin-bottom: 0;
+  }
+  
+  .btn-group {
+    flex-direction: row;
+  }
+  
+  table.table {
+    display: table;
+  }
+  
+  /* Hover effects only on desktop */
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  
+  tr:hover {
+    background: var(--bg-color);
+  }
+}
+
+/* Large Desktop: 1400px+ */
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1400px;
+  }
+  
+  .header-content,
+  .header-top-content {
+    max-width: 1400px;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-width: 767px) and (orientation: landscape) {
+  .header-top {
+    display: block;
+    padding: 0.375rem 1rem;
+  }
+  
+  .hero {
+    padding: 2rem 1rem;
+  }
+  
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Print Styles */
+@media print {
+  header,
+  footer,
+  .btn,
+  .pagination {
+    display: none;
+  }
+  
+  .card {
+    page-break-inside: avoid;
+  }
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
