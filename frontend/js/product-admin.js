@@ -256,11 +256,638 @@ function closeAddSchoolModal() {
 }
 
 /**
- * View school details
+ * View school details with full management
  */
-function viewSchool(schoolId) {
-  // TODO: Implement school details view
-  alert('School details view - Coming soon!');
+async function viewSchool(schoolId) {
+  try {
+    showLoading('Loading school details...');
+    const supabase = getSupabase();
+    if (!supabase) return;
+    
+    // Get school details
+    const { data: school, error: schoolError } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (schoolError || !school) {
+      showToast('School not found', 'error');
+      return;
+    }
+    
+    // Get all school admins (role = 'admin')
+    const { data: admins } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('role', 'admin')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+    
+    // Get all principals
+    const { data: principals } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('role', 'principal')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+    
+    // Get all teachers
+    const { data: teachers } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('role', 'teacher')
+      .eq('active', true)
+      .order('name', { ascending: true });
+    
+    // Get all students
+    const { data: students } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('active', true)
+      .order('class', { ascending: true })
+      .order('section', { ascending: true })
+      .order('roll', { ascending: true });
+    
+    // Get school stats
+    const { data: attendanceLogs } = await supabase
+      .from('attendance_log')
+      .select('log_id')
+      .eq('school_id', schoolId)
+      .gte('date', new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
+    
+    // Create comprehensive modal
+    const modal = document.createElement('div');
+    modal.id = 'schoolDetailsModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;';
+    modal.innerHTML = `
+      <div class="card" style="max-width: 1200px; width: 100%; max-height: 90vh; overflow-y: auto; margin: auto; position: relative;">
+        <button onclick="closeSchoolDetailsModal()" style="position: absolute; top: 1rem; right: 1rem; background: var(--danger-color); color: white; border: none; width: 2rem; height: 2rem; border-radius: 50%; cursor: pointer; font-size: 1.25rem; z-index: 10;">&times;</button>
+        
+        <div style="margin-bottom: 2rem;">
+          <h2 style="margin-bottom: 0.5rem;">🏫 ${school.school_name || 'N/A'}</h2>
+          <p style="color: var(--text-secondary);">School ID: ${school.school_id}</p>
+        </div>
+        
+        <!-- Tabs -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color);">
+          <button class="tab-btn active" data-tab="overview" onclick="switchSchoolTab('overview')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid var(--primary-color); cursor: pointer; font-weight: 600; color: var(--primary-color);">📊 Overview</button>
+          <button class="tab-btn" data-tab="admins" onclick="switchSchoolTab('admins')" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">👥 Admins</button>
+          <button class="tab-btn" data-tab="principals" onclick="switchSchoolTab('principals')" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">🎓 Principals</button>
+          <button class="tab-btn" data-tab="teachers" onclick="switchSchoolTab('teachers')" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">👨‍🏫 Teachers</button>
+          <button class="tab-btn" data-tab="students" onclick="switchSchoolTab('students')" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">👦 Students</button>
+        </div>
+        
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="school-tab-content">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="padding: 1.5rem; background: var(--bg-color); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Admins</div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">${admins?.length || 0}</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--bg-color); border-radius: 0.5rem; border-left: 4px solid var(--secondary-color);">
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Principals</div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-color);">${principals?.length || 0}</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--bg-color); border-radius: 0.5rem; border-left: 4px solid var(--success-color);">
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Teachers</div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--success-color);">${teachers?.length || 0}</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--bg-color); border-radius: 0.5rem; border-left: 4px solid var(--warning-color);">
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Students</div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--warning-color);">${students?.length || 0}</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--bg-color); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+              <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Attendance Records (30 days)</div>
+              <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">${attendanceLogs?.length || 0}</div>
+            </div>
+          </div>
+          
+          <div style="display: grid; gap: 1.5rem;">
+            <div>
+              <h3 style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">School Information</h3>
+              <div style="display: grid; gap: 0.75rem;">
+                <p><strong>Name:</strong> ${school.school_name || 'N/A'}</p>
+                <p><strong>ID:</strong> ${school.school_id}</p>
+                <p><strong>Address:</strong> ${school.address || 'N/A'}</p>
+                <p><strong>Phone:</strong> ${school.phone || 'N/A'}</p>
+                <p><strong>Email:</strong> ${school.email || 'N/A'}</p>
+                <p><strong>Status:</strong> <span class="badge ${school.active ? 'badge-success' : 'badge-danger'}">${school.active ? '✅ Active' : '❌ Inactive'}</span></p>
+                <p><strong>Created:</strong> ${new Date(school.created_at).toLocaleDateString()}</p>
+                <p><strong>Last Updated:</strong> ${new Date(school.updated_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Admins Tab -->
+        <div id="tab-admins" class="school-tab-content" style="display: none;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>School Administrators (${admins?.length || 0})</h3>
+            <button class="btn btn-primary" onclick="addSchoolAdmin('${schoolId}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add Admin</button>
+          </div>
+          ${admins && admins.length > 0 ? `
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+                  <th style="padding: 0.75rem; text-align: left;">Name</th>
+                  <th style="padding: 0.75rem; text-align: left;">Email</th>
+                  <th style="padding: 0.75rem; text-align: left;">Phone</th>
+                  <th style="padding: 0.75rem; text-align: left;">Created</th>
+                  <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${admins.map(admin => `
+                  <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.75rem;">${admin.name}</td>
+                    <td style="padding: 0.75rem;">${admin.email}</td>
+                    <td style="padding: 0.75rem;">${admin.phone || 'N/A'}</td>
+                    <td style="padding: 0.75rem;">${new Date(admin.created_at).toLocaleDateString()}</td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                      <button class="btn btn-secondary" onclick="editSchoolAdmin('${admin.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; margin-right: 0.5rem;">Edit</button>
+                      <button class="btn btn-danger" onclick="deleteSchoolAdmin('${admin.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Delete</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No administrators found.</p>'}
+        </div>
+        
+        <!-- Principals Tab -->
+        <div id="tab-principals" class="school-tab-content" style="display: none;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Principals (${principals?.length || 0})</h3>
+            <button class="btn btn-primary" onclick="addPrincipal('${schoolId}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add Principal</button>
+          </div>
+          ${principals && principals.length > 0 ? `
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+                  <th style="padding: 0.75rem; text-align: left;">Name</th>
+                  <th style="padding: 0.75rem; text-align: left;">Email</th>
+                  <th style="padding: 0.75rem; text-align: left;">Phone</th>
+                  <th style="padding: 0.75rem; text-align: left;">Created</th>
+                  <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${principals.map(principal => `
+                  <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.75rem;">${principal.name}</td>
+                    <td style="padding: 0.75rem;">${principal.email}</td>
+                    <td style="padding: 0.75rem;">${principal.phone || 'N/A'}</td>
+                    <td style="padding: 0.75rem;">${new Date(principal.created_at).toLocaleDateString()}</td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                      <button class="btn btn-secondary" onclick="editPrincipal('${principal.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; margin-right: 0.5rem;">Edit</button>
+                      <button class="btn btn-danger" onclick="deletePrincipal('${principal.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Delete</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No principals found.</p>'}
+        </div>
+        
+        <!-- Teachers Tab -->
+        <div id="tab-teachers" class="school-tab-content" style="display: none;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Teachers (${teachers?.length || 0})</h3>
+            <button class="btn btn-primary" onclick="addTeacher('${schoolId}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add Teacher</button>
+          </div>
+          ${teachers && teachers.length > 0 ? `
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background: var(--bg-color);">
+                  <tr style="border-bottom: 2px solid var(--border-color);">
+                    <th style="padding: 0.75rem; text-align: left;">Name</th>
+                    <th style="padding: 0.75rem; text-align: left;">Email</th>
+                    <th style="padding: 0.75rem; text-align: left;">Classes</th>
+                    <th style="padding: 0.75rem; text-align: left;">Phone</th>
+                    <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${teachers.map(teacher => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 0.75rem;">${teacher.name}</td>
+                      <td style="padding: 0.75rem;">${teacher.email}</td>
+                      <td style="padding: 0.75rem;">${teacher.class_assigned && teacher.class_assigned.length > 0 ? teacher.class_assigned.join(', ') : 'None'}</td>
+                      <td style="padding: 0.75rem;">${teacher.phone || 'N/A'}</td>
+                      <td style="padding: 0.75rem; text-align: center;">
+                        <button class="btn btn-secondary" onclick="editTeacher('${teacher.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; margin-right: 0.5rem;">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteTeacher('${teacher.email}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No teachers found.</p>'}
+        </div>
+        
+        <!-- Students Tab -->
+        <div id="tab-students" class="school-tab-content" style="display: none;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Students (${students?.length || 0})</h3>
+            <button class="btn btn-primary" onclick="addStudent('${schoolId}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add Student</button>
+          </div>
+          ${students && students.length > 0 ? `
+            <div style="max-height: 400px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background: var(--bg-color);">
+                  <tr style="border-bottom: 2px solid var(--border-color);">
+                    <th style="padding: 0.75rem; text-align: left;">Name</th>
+                    <th style="padding: 0.75rem; text-align: left;">Class</th>
+                    <th style="padding: 0.75rem; text-align: left;">Section</th>
+                    <th style="padding: 0.75rem; text-align: left;">Roll</th>
+                    <th style="padding: 0.75rem; text-align: left;">Parent</th>
+                    <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${students.map(student => `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 0.75rem;">${student.name}</td>
+                      <td style="padding: 0.75rem;">${student.class}</td>
+                      <td style="padding: 0.75rem;">${student.section}</td>
+                      <td style="padding: 0.75rem;">${student.roll}</td>
+                      <td style="padding: 0.75rem;">${student.parent_name || 'N/A'}</td>
+                      <td style="padding: 0.75rem; text-align: center;">
+                        <button class="btn btn-secondary" onclick="editStudent('${student.student_id}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; margin-right: 0.5rem;">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteStudent('${student.student_id}', '${schoolId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No students found.</p>'}
+        </div>
+        
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+          <button class="btn btn-primary" onclick="closeSchoolDetailsModal()">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Store school data for management functions
+    window.currentSchoolData = { school, admins, principals, teachers, students, schoolId };
+    
+  } catch (error) {
+    console.error('View school error:', error);
+    showToast('Error loading school details', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Switch school details tab
+ */
+function switchSchoolTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.school-tab-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.borderBottom = 'none';
+    btn.style.color = 'var(--text-secondary)';
+  });
+  
+  // Show selected tab
+  const tabContent = document.getElementById(`tab-${tabName}`);
+  if (tabContent) {
+    tabContent.style.display = 'block';
+  }
+  
+  // Activate button
+  const btn = document.querySelector(`[data-tab="${tabName}"]`);
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.borderBottom = '3px solid var(--primary-color)';
+    btn.style.color = 'var(--primary-color)';
+  }
+}
+
+/**
+ * Close school details modal
+ */
+function closeSchoolDetailsModal() {
+  const modal = document.getElementById('schoolDetailsModal');
+  if (modal) modal.remove();
+  window.currentSchoolData = null;
+}
+
+/**
+ * Add School Admin
+ */
+async function addSchoolAdmin(schoolId) {
+  const name = prompt('Enter admin name:');
+  if (!name) return;
+  
+  const email = prompt('Enter admin email:');
+  if (!email) return;
+  
+  const phone = prompt('Enter admin phone (optional):') || null;
+  
+  try {
+    showLoading('Adding school admin...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .insert({
+        email,
+        school_id: schoolId,
+        name,
+        role: 'admin',
+        phone,
+        class_assigned: [],
+        active: true
+      });
+    
+    if (error) throw error;
+    
+    showToast('School admin added successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Add admin error:', error);
+    showToast('Error adding admin: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Add Principal
+ */
+async function addPrincipal(schoolId) {
+  const name = prompt('Enter principal name:');
+  if (!name) return;
+  
+  const email = prompt('Enter principal email:');
+  if (!email) return;
+  
+  const phone = prompt('Enter principal phone (optional):') || null;
+  
+  try {
+    showLoading('Adding principal...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .insert({
+        email,
+        school_id: schoolId,
+        name,
+        role: 'principal',
+        phone,
+        class_assigned: [],
+        active: true
+      });
+    
+    if (error) throw error;
+    
+    showToast('Principal added successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Add principal error:', error);
+    showToast('Error adding principal: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Add Teacher
+ */
+async function addTeacher(schoolId) {
+  const name = prompt('Enter teacher name:');
+  if (!name) return;
+  
+  const email = prompt('Enter teacher email:');
+  if (!email) return;
+  
+  const classes = prompt('Enter assigned classes (comma-separated, optional):') || '';
+  const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
+  
+  const phone = prompt('Enter teacher phone (optional):') || null;
+  
+  try {
+    showLoading('Adding teacher...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .insert({
+        email,
+        school_id: schoolId,
+        name,
+        role: 'teacher',
+        phone,
+        class_assigned: classAssigned,
+        active: true
+      });
+    
+    if (error) throw error;
+    
+    showToast('Teacher added successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Add teacher error:', error);
+    showToast('Error adding teacher: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Add Student
+ */
+async function addStudent(schoolId) {
+  const name = prompt('Enter student name:');
+  if (!name) return;
+  
+  const className = prompt('Enter class:');
+  if (!className) return;
+  
+  const section = prompt('Enter section:');
+  if (!section) return;
+  
+  const roll = parseInt(prompt('Enter roll number:'));
+  if (!roll) return;
+  
+  const parentName = prompt('Enter parent name (optional):') || null;
+  const parentMobile = prompt('Enter parent mobile (optional):') || null;
+  
+  try {
+    showLoading('Adding student...');
+    const supabase = getSupabase();
+    
+    const studentId = 'STU' + Date.now().toString().slice(-10);
+    
+    const { error } = await supabase
+      .from('students')
+      .insert({
+        student_id: studentId,
+        school_id: schoolId,
+        name,
+        class: className,
+        section,
+        roll,
+        parent_name: parentName,
+        parent_mobile: parentMobile,
+        active: true,
+        whatsapp_alert_enabled: false
+      });
+    
+    if (error) throw error;
+    
+    showToast('Student added successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Add student error:', error);
+    showToast('Error adding student: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+/**
+ * Edit/Delete functions (simplified - can be enhanced)
+ */
+async function editSchoolAdmin(email, schoolId) {
+  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+}
+
+async function deleteSchoolAdmin(email, schoolId) {
+  if (!confirm(`Are you sure you want to delete admin ${email}?`)) return;
+  
+  try {
+    showLoading('Deleting admin...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .update({ active: false })
+      .eq('email', email)
+      .eq('school_id', schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Admin deleted successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    showToast('Error deleting admin: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editPrincipal(email, schoolId) {
+  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+}
+
+async function deletePrincipal(email, schoolId) {
+  if (!confirm(`Are you sure you want to delete principal ${email}?`)) return;
+  
+  try {
+    showLoading('Deleting principal...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .update({ active: false })
+      .eq('email', email)
+      .eq('school_id', schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Principal deleted successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Delete principal error:', error);
+    showToast('Error deleting principal: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editTeacher(email, schoolId) {
+  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+}
+
+async function deleteTeacher(email, schoolId) {
+  if (!confirm(`Are you sure you want to delete teacher ${email}?`)) return;
+  
+  try {
+    showLoading('Deleting teacher...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('teachers')
+      .update({ active: false })
+      .eq('email', email)
+      .eq('school_id', schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Teacher deleted successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Delete teacher error:', error);
+    showToast('Error deleting teacher: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function editStudent(studentId, schoolId) {
+  showToast('Edit functionality - Coming soon! Use database directly for now.', 'info');
+}
+
+async function deleteStudent(studentId, schoolId) {
+  if (!confirm(`Are you sure you want to delete this student?`)) return;
+  
+  try {
+    showLoading('Deleting student...');
+    const supabase = getSupabase();
+    
+    const { error } = await supabase
+      .from('students')
+      .update({ active: false })
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId);
+    
+    if (error) throw error;
+    
+    showToast('Student deleted successfully!', 'success');
+    closeSchoolDetailsModal();
+    await viewSchool(schoolId);
+  } catch (error) {
+    console.error('Delete student error:', error);
+    showToast('Error deleting student: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 /**

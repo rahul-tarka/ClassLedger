@@ -32,6 +32,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
 -- PRODUCT ADMINS TABLE (Super Admin)
+-- NOTE: Multiple product admins are allowed
 -- ============================================
 CREATE TABLE product_admins (
   email VARCHAR(255) PRIMARY KEY,
@@ -58,6 +59,12 @@ CREATE TABLE schools (
 
 -- ============================================
 -- TEACHERS TABLE
+-- NOTE: 
+-- - Multiple school admins (role='admin') per school are allowed
+-- - Multiple principals (role='principal') per school are allowed
+-- - Multiple teachers per school are allowed
+-- - Email is PRIMARY KEY, so one email = one role per school
+-- - Same email can be Product Admin (in product_admins) + School Admin (in teachers)
 -- ============================================
 CREATE TABLE teachers (
   email VARCHAR(255) PRIMARY KEY,
