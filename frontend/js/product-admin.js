@@ -258,9 +258,102 @@ function closeAddSchoolModal() {
 /**
  * View school details
  */
-function viewSchool(schoolId) {
-  // TODO: Implement school details view
-  alert('School details view - Coming soon!');
+async function viewSchool(schoolId) {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    
+    // Get school details
+    const { data: school, error: schoolError } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('school_id', schoolId)
+      .single();
+    
+    if (schoolError || !school) {
+      showToast('School not found', 'error');
+      return;
+    }
+    
+    // Get school admin
+    const { data: admin } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('role', 'admin')
+      .eq('active', true)
+      .single();
+    
+    // Get school stats
+    const { data: teachers } = await supabase
+      .from('teachers')
+      .select('email')
+      .eq('school_id', schoolId)
+      .eq('active', true);
+    
+    const { data: students } = await supabase
+      .from('students')
+      .select('student_id')
+      .eq('school_id', schoolId)
+      .eq('active', true);
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'schoolDetailsModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+    modal.innerHTML = `
+      <div class="card" style="max-width: 700px; max-height: 90vh; overflow-y: auto; margin: 2rem; position: relative;">
+        <button onclick="closeSchoolDetailsModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+        <h2 style="margin-bottom: 1.5rem;">School Details</h2>
+        <div style="display: grid; gap: 1.5rem;">
+          <div>
+            <h3 style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">School Information</h3>
+            <p><strong>Name:</strong> ${school.school_name || 'N/A'}</p>
+            <p><strong>ID:</strong> ${school.school_id}</p>
+            <p><strong>Address:</strong> ${school.address || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${school.phone || 'N/A'}</p>
+            <p><strong>Email:</strong> ${school.email || 'N/A'}</p>
+            <p><strong>Status:</strong> <span class="badge ${school.active ? 'badge-success' : 'badge-danger'}">${school.active ? 'Active' : 'Inactive'}</span></p>
+            <p><strong>Created:</strong> ${new Date(school.created_at).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <h3 style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">School Admin</h3>
+            <p><strong>Name:</strong> ${admin?.name || 'N/A'}</p>
+            <p><strong>Email:</strong> ${admin?.email || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${admin?.phone || 'N/A'}</p>
+          </div>
+          <div>
+            <h3 style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">Statistics</h3>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+              <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Teachers</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${teachers?.length || 0}</div>
+              </div>
+              <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Students</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${students?.length || 0}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+          <button class="btn btn-primary" onclick="closeSchoolDetailsModal()">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } catch (error) {
+    console.error('View school error:', error);
+    showToast('Error loading school details', 'error');
+  }
+}
+
+/**
+ * Close school details modal
+ */
+function closeSchoolDetailsModal() {
+  const modal = document.getElementById('schoolDetailsModal');
+  if (modal) modal.remove();
 }
 
 /**

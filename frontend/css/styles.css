@@ -108,13 +108,17 @@ header {
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 1rem;
 }
 
 .header-logo {
   height: 48px;
   width: auto;
   display: block;
+  padding: 0.5rem;
+  border: 2px solid var(--secondary-color);
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.05);
   /* Ensure logo is visible on dark header - use white version or apply filter */
 }
 
@@ -308,13 +312,13 @@ header .header-logo[src*="logo.svg"]:not([src*="logo-white"]) {
 .btn-secondary {
   background: white;
   color: var(--primary-color);
-  border: 2px solid var(--secondary-color);
+  border: 2px solid var(--primary-color);
 }
 
 .btn-secondary:hover {
   background: var(--primary-color);
   color: white;
-  border-color: var(--secondary-color);
+  border-color: var(--primary-color);
 }
 
 .btn-danger {
