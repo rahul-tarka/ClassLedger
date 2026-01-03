@@ -247,7 +247,7 @@ DECLARE
     status_val VARCHAR(1);
     type_val VARCHAR(20);
     teacher_email_val VARCHAR(255);
-    days TEXT[] := ARRAY['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    days TEXT[] := ARRAY['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     statuses TEXT[] := ARRAY['P', 'A', 'L'];
 BEGIN
     -- Generate attendance for last 30 days
