@@ -113,7 +113,7 @@ function createItemsPerPageSelector(currentValue, onChange, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  const options = [10, 25, 50, 100];
+  const options = [5, 10, 25, 50, 100]; // 5 is default to minimize scrolling
   
   const isMobile = window.innerWidth <= 767;
   

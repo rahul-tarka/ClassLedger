@@ -6,13 +6,13 @@
 // Pagination state
 let studentsPaginationState = {
   currentPage: 1,
-  itemsPerPage: 25,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
   filteredData: []
 };
 
 let teachersPaginationState = {
   currentPage: 1,
-  itemsPerPage: 25,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
   filteredData: []
 };
 

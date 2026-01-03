@@ -11,13 +11,13 @@ let selectedDate = null;
 // Pagination state for boards
 let absentStudentsPaginationState = {
   currentPage: 1,
-  itemsPerPage: 20,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
   allData: []
 };
 
 let teacherAccountabilityPaginationState = {
   currentPage: 1,
-  itemsPerPage: 20,
+  itemsPerPage: 5, // Default: 5 rows to minimize scrolling
   allData: []
 };
 
