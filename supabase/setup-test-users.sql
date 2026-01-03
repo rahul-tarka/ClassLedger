@@ -3,6 +3,12 @@
 -- Product Admin: tarka@gmail.com
 -- School Admin: mail.rahul.rathod@gmail.com
 -- ============================================
+-- IMPORTANT: Product Admin has NO connection to schools
+-- - Product Admin is for product owner only
+-- - Product Admin can manage ALL schools (multi-tenant)
+-- - Product Admin does NOT have school_id
+-- - School Admin is school-specific and has school_id
+-- ============================================
 
 DO $$
 DECLARE
@@ -62,9 +68,13 @@ BEGIN
     RAISE NOTICE '🔐 Login Priority:';
     RAISE NOTICE '   Product Admin > School Admin > Teacher/Principal';
     RAISE NOTICE '';
-    RAISE NOTICE '💡 Note:';
-    RAISE NOTICE '   - Product Admin can access product-admin-dashboard.html';
-    RAISE NOTICE '   - School Admin can access admin-dashboard.html';
+    RAISE NOTICE '💡 IMPORTANT NOTES:';
+    RAISE NOTICE '   - Product Admin is COMPLETELY INDEPENDENT of schools';
+    RAISE NOTICE '   - Product Admin can manage ALL schools (multi-tenant)';
+    RAISE NOTICE '   - Product Admin has NO school_id (not linked to any school)';
+    RAISE NOTICE '   - School Admin is school-specific and has school_id';
+    RAISE NOTICE '   - Product Admin dashboard: product-admin-dashboard.html';
+    RAISE NOTICE '   - School Admin dashboard: admin-dashboard.html';
     RAISE NOTICE '   - Both can login with Google OAuth using their respective emails';
     RAISE NOTICE '   - Make sure school_id_val (%) exists in schools table', school_id_val;
 END $$;

@@ -35,12 +35,14 @@ async function authenticateUser() {
     console.log('📋 Product Admin check:', { productAdmin, error: productAdminError });
     
     if (productAdmin && !productAdminError) {
-      // Product Admin
+      // Product Admin - NO school_id (completely independent of schools)
+      // Product Admin can manage ALL schools (multi-tenant)
       const userData = {
         email: productAdmin.email,
         name: productAdmin.name,
         role: 'product_admin',
         type: 'product_admin'
+        // NOTE: No schoolId - Product Admin is not linked to any school
       };
       
       sessionStorage.setItem('user', JSON.stringify(userData));

@@ -1,6 +1,12 @@
 /**
  * Product Admin Dashboard
  * Manages all schools, creates new schools, assigns school admins
+ * 
+ * IMPORTANT: Product Admin is COMPLETELY INDEPENDENT of schools
+ * - Product Admin has NO school_id (not linked to any school)
+ * - Product Admin can manage ALL schools (multi-tenant)
+ * - Product Admin is for product owner only
+ * - School Admin is school-specific and has school_id
  */
 
 let currentUser = null;
@@ -78,7 +84,8 @@ async function loadDashboardData() {
   try {
     const supabase = getSupabase();
     
-    // Load all schools
+    // Load all schools (Product Admin can see ALL schools - no school_id filter)
+    // Product Admin is independent of schools - can manage any school
     const { data: schools, error: schoolsError } = await supabase
       .from('schools')
       .select('*')
