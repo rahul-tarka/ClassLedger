@@ -73,12 +73,9 @@ header.header-hidden {
 }
 
 /* Add padding to body to compensate for fixed header */
-body {
-  padding-top: 0;
-}
-
+/* Padding will be set dynamically by header-scroll.js */
 body.has-fixed-header {
-  padding-top: 120px; /* Adjust based on header height */
+  /* padding-top will be set by JavaScript based on actual header height */
 }
 
 .header-top {
