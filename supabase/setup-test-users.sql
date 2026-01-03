@@ -95,9 +95,72 @@ BEGIN
 END $$;
 
 -- ============================================
--- VERIFY USERS WERE CREATED
+-- VIEW ALL DATA FROM BOTH TABLES
 -- ============================================
--- Run this to verify:
+
+-- 1. View ALL Product Admins
+SELECT 
+    'Product Admin' as role_type,
+    email,
+    name,
+    active,
+    created_at,
+    updated_at,
+    NULL::VARCHAR as school_id,
+    NULL::VARCHAR as role
+FROM product_admins 
+ORDER BY created_at DESC;
+
+-- 2. View ALL Teachers (School Admins, Principals, Teachers)
+SELECT 
+    'School User' as role_type,
+    email,
+    name,
+    role,
+    school_id,
+    class_assigned,
+    phone,
+    active,
+    created_at,
+    updated_at
+FROM teachers 
+ORDER BY school_id, role, created_at DESC;
+
+-- 3. Combined View (All Users)
+SELECT 
+    'Product Admin' as role_type,
+    email,
+    name,
+    active,
+    created_at,
+    updated_at,
+    NULL::VARCHAR as school_id,
+    NULL::VARCHAR as role,
+    NULL::TEXT[] as class_assigned,
+    NULL::VARCHAR as phone
+FROM product_admins 
+
+UNION ALL
+
+SELECT 
+    'School User' as role_type,
+    email,
+    name,
+    active,
+    created_at,
+    updated_at,
+    school_id::VARCHAR,
+    role::VARCHAR,
+    class_assigned,
+    phone::VARCHAR
+FROM teachers 
+
+ORDER BY role_type, school_id, created_at DESC;
+
+-- ============================================
+-- VERIFY SPECIFIC TEST USERS
+-- ============================================
+-- Run this to verify test users:
 
 SELECT 
     'Product Admin' as role_type,
