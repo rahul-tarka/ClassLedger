@@ -278,15 +278,46 @@ BEGIN
                 time_val := '08:00:00'::TIME + (random() * INTERVAL '90 minutes');
                 log_id_val := 'LOG' || TO_CHAR(date_val, 'YYYYMMDD') || LPAD((i * 1000 + student_rec.roll)::TEXT, 6, '0') || '1';
                 
-                -- Get a teacher for this class
+                -- Get a teacher for this class (with proper type casting)
                 SELECT email INTO teacher_email_val
                 FROM teachers
                 WHERE school_id = student_rec.school_id
-                  AND (class_assigned @> ARRAY[student_rec.class] OR class_assigned = ARRAY[]::TEXT[])
+                  AND (
+                    class_assigned @> ARRAY[student_rec.class::TEXT]::TEXT[] 
+                    OR class_assigned = ARRAY[]::TEXT[]
+                    OR array_length(class_assigned, 1) IS NULL
+                  )
                   AND role = 'teacher'
                   AND active = true
                 ORDER BY random()
                 LIMIT 1;
+                
+                -- Fallback: Get any teacher from the school if no class-specific teacher found
+                IF teacher_email_val IS NULL THEN
+                    SELECT email INTO teacher_email_val
+                    FROM teachers
+                    WHERE school_id = student_rec.school_id
+                      AND role IN ('teacher', 'admin')
+                      AND active = true
+                    ORDER BY random()
+                    LIMIT 1;
+                END IF;
+                
+                -- Final fallback: Use admin email
+                IF teacher_email_val IS NULL THEN
+                    SELECT email INTO teacher_email_val
+                    FROM teachers
+                    WHERE school_id = student_rec.school_id
+                      AND role = 'admin'
+                      AND active = true
+                    LIMIT 1;
+                END IF;
+                
+                -- Get day name (DOW returns 0-6, Sunday=0, Monday=1, etc.)
+                -- Array is 1-indexed, so add 1 to DOW (0 becomes 1 for Sunday)
+                day_index := EXTRACT(DOW FROM date_val) + 1;
+                IF day_index > 7 THEN day_index := 1; END IF;
+                day_name := days[day_index];
                 
                 INSERT INTO attendance_log (
                     log_id, date, time, student_id, school_id, class,
@@ -302,7 +333,7 @@ BEGIN
                     status_val,
                     'CHECK_IN',
                     teacher_email_val,
-                    days[EXTRACT(DOW FROM date_val)],
+                    day_name,
                     CASE WHEN status_val = 'L' THEN 'Late arrival' ELSE NULL END
                 ) ON CONFLICT (log_id) DO NOTHING;
             END IF;
@@ -311,6 +342,22 @@ BEGIN
             IF status_val = 'P' AND random() > 0.1 THEN
                 time_val := '14:00:00'::TIME + (random() * INTERVAL '120 minutes');
                 log_id_val := 'LOG' || TO_CHAR(date_val, 'YYYYMMDD') || LPAD((i * 1000 + student_rec.roll)::TEXT, 6, '0') || '2';
+                
+                -- Use same teacher_email_val from CHECK_IN or get a new one
+                IF teacher_email_val IS NULL THEN
+                    SELECT email INTO teacher_email_val
+                    FROM teachers
+                    WHERE school_id = student_rec.school_id
+                      AND role IN ('teacher', 'admin')
+                      AND active = true
+                    ORDER BY random()
+                    LIMIT 1;
+                END IF;
+                
+                -- Get day name
+                day_index := EXTRACT(DOW FROM date_val) + 1;
+                IF day_index > 7 THEN day_index := 1; END IF;
+                day_name := days[day_index];
                 
                 INSERT INTO attendance_log (
                     log_id, date, time, student_id, school_id, class,
@@ -326,7 +373,7 @@ BEGIN
                     NULL,
                     'CHECK_OUT',
                     teacher_email_val,
-                    days[EXTRACT(DOW FROM date_val)],
+                    day_name,
                     NULL
                 ) ON CONFLICT (log_id) DO NOTHING;
             END IF;
