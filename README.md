@@ -197,6 +197,7 @@ ClassLedger provides:
   - View analytics and trends
   - View teacher accountability
   - Export reports
+- **Note:** Multiple principals per school are allowed
 
 ---
 
