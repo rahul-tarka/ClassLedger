@@ -3,6 +3,19 @@
  * Full CRUD operations for students, teachers, and system settings
  */
 
+// Pagination state
+let studentsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 25,
+  filteredData: []
+};
+
+let teachersPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 25,
+  filteredData: []
+};
+
 /**
  * Load all students for management
  */
@@ -40,12 +53,72 @@ async function loadAllStudentsForManagement() {
       active: s.active
     }));
     
-    renderStudentsTable(formattedStudents);
+    // Store in cache and update filters
+    allStudentsCache = formattedStudents;
+    studentsPaginationState.filteredData = formattedStudents;
+    
+    // Populate class filter
+    const classes = [...new Set(formattedStudents.map(s => s.class))].sort();
+    const classFilter = document.getElementById('studentClassFilter');
+    if (classFilter) {
+      const currentValue = classFilter.value;
+      classFilter.innerHTML = '<option value="">All Classes</option>' + 
+        classes.map(c => `<option value="${c}" ${c === currentValue ? 'selected' : ''}>${c}</option>`).join('');
+    }
+    
+    renderStudentsTableWithPagination();
   } catch (error) {
     console.error('Load students error:', error);
     showToast('Error loading students', 'error');
     document.getElementById('studentsList').innerHTML = '<p class="text-center">Error loading students</p>';
   }
+}
+
+/**
+ * Render students table with pagination
+ */
+function renderStudentsTableWithPagination() {
+  const { currentPage, itemsPerPage, filteredData } = studentsPaginationState;
+  const paginationResult = paginateData(filteredData, currentPage, itemsPerPage);
+  
+  renderStudentsTable(paginationResult.data);
+  
+  // Create pagination controls
+  createPagination(
+    currentPage,
+    paginationResult.totalPages,
+    'changeStudentsPage',
+    'studentsPagination'
+  );
+  
+  // Create pagination info
+  createPaginationInfo(paginationResult, 'studentsPaginationInfo');
+  
+  // Create items per page selector
+  createItemsPerPageSelector(
+    itemsPerPage,
+    'changeStudentsItemsPerPage',
+    'studentsItemsPerPage'
+  );
+}
+
+/**
+ * Change students page
+ */
+function changeStudentsPage(page) {
+  studentsPaginationState.currentPage = page;
+  renderStudentsTableWithPagination();
+  // Scroll to top of table
+  document.getElementById('studentsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Change students items per page
+ */
+function changeStudentsItemsPerPage(itemsPerPage) {
+  studentsPaginationState.itemsPerPage = itemsPerPage;
+  studentsPaginationState.currentPage = 1; // Reset to first page
+  renderStudentsTableWithPagination();
 }
 
 /**
@@ -61,50 +134,79 @@ function renderStudentsTable(students) {
   }
   
   let html = `
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Student ID</th>
-          <th>Name</th>
-          <th>Class</th>
-          <th>Section</th>
-          <th>Roll</th>
-          <th>Parent Mobile</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Student ID</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Name</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Class</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Section</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Roll</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Parent Mobile</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Status</th>
+            <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
   
   students.forEach(student => {
+    // Get attendance correlation (quick stats)
+    const attendanceStats = getStudentAttendanceStats(student.studentId);
+    
     html += `
-      <tr>
-        <td>${student.studentId || ''}</td>
-        <td>${student.name || ''}</td>
-        <td>${student.class || ''}</td>
-        <td>${student.section || ''}</td>
-        <td>${student.roll || ''}</td>
-        <td>${student.parentMobile || ''}</td>
-        <td>
-          <span class="badge ${student.active ? 'badge-success' : 'badge-danger'}">
-            ${student.active ? 'Active' : 'Inactive'}
-          </span>
+      <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
+          onmouseover="this.style.background='var(--bg-color)'" 
+          onmouseout="this.style.background='transparent'">
+        <td style="padding: 0.75rem;">
+          <div style="font-weight: 500;">${student.studentId || ''}</div>
+          ${attendanceStats ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">📊 ${attendanceStats.present}/${attendanceStats.total} days</div>` : ''}
         </td>
-        <td>
-          <button class="btn btn-sm btn-primary" onclick="openEditStudentModal('${student.studentId}')">Edit</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteStudent('${student.studentId}')">Delete</button>
+        <td style="padding: 0.75rem;">
+          <div style="font-weight: 500;">${student.name || ''}</div>
+          ${student.parentName ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">👤 ${student.parentName}</div>` : ''}
+        </td>
+        <td style="padding: 0.75rem;">
+          <span class="badge badge-info" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem;">${student.class || ''}</span>
+        </td>
+        <td style="padding: 0.75rem;">${student.section || ''}</td>
+        <td style="padding: 0.75rem; font-weight: 500;">${student.roll || ''}</td>
+        <td style="padding: 0.75rem;">
+          ${student.parentMobile ? `<a href="tel:${student.parentMobile}" style="color: var(--primary-color); text-decoration: none;">📞 ${student.parentMobile}</a>` : 'N/A'}
+        </td>
+        <td style="padding: 0.75rem;">
+          <span class="badge ${student.active ? 'badge-success' : 'badge-danger'}">
+            ${student.active ? '✅ Active' : '❌ Inactive'}
+          </span>
+          ${student.whatsappAlertEnabled ? '<div style="font-size: 0.75rem; color: var(--success-color); margin-top: 0.25rem;">📱 Alerts ON</div>' : ''}
+        </td>
+        <td style="padding: 0.75rem; text-align: center;">
+          <div style="display: flex; gap: 0.5rem; justify-content: center;">
+            <button class="btn btn-sm btn-primary" onclick="openEditStudentModal('${student.studentId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${student.studentId}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">🗑️ Delete</button>
+          </div>
         </td>
       </tr>
     `;
   });
   
   html += `
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   `;
   
   container.innerHTML = html;
+}
+
+/**
+ * Get student attendance stats (correlation)
+ */
+function getStudentAttendanceStats(studentId) {
+  // This would be enhanced to fetch from cache or make a quick query
+  // For now, return null (can be enhanced later)
+  return null;
 }
 
 /**
@@ -150,7 +252,36 @@ async function searchStudents() {
     );
   });
   
-  renderStudentsTable(filtered);
+  studentsPaginationState.filteredData = filtered;
+  studentsPaginationState.currentPage = 1; // Reset to first page
+  renderStudentsTableWithPagination();
+}
+
+/**
+ * Filter students by class and status
+ */
+function filterStudents() {
+  const classFilter = document.getElementById('studentClassFilter')?.value || '';
+  const statusFilter = document.getElementById('studentStatusFilter')?.value || '';
+  const searchTerm = document.getElementById('studentSearch')?.value.toLowerCase() || '';
+  
+  let filtered = allStudentsCache.filter(student => {
+    const matchesClass = !classFilter || student.class === classFilter;
+    const matchesStatus = !statusFilter || 
+      (statusFilter === 'active' && student.active) ||
+      (statusFilter === 'inactive' && !student.active);
+    const matchesSearch = !searchTerm || 
+      (student.name || '').toLowerCase().includes(searchTerm) ||
+      (student.studentId || '').toLowerCase().includes(searchTerm) ||
+      (student.class || '').toLowerCase().includes(searchTerm) ||
+      (student.roll || '').toString().includes(searchTerm);
+    
+    return matchesClass && matchesStatus && matchesSearch;
+  });
+  
+  studentsPaginationState.filteredData = filtered;
+  studentsPaginationState.currentPage = 1;
+  renderStudentsTableWithPagination();
 }
 
 /**
@@ -208,9 +339,9 @@ async function addStudent(studentData) {
     
     if (error) throw error;
     
-    showToast('Student added successfully', 'success');
-    await loadAllStudentsForManagement();
-    allStudentsCache = []; // Clear cache
+      showToast('Student added successfully', 'success');
+      allStudentsCache = []; // Clear cache
+      await loadAllStudentsForManagement();
   } catch (error) {
     console.error('Add student error:', error);
     showToast('Error adding student: ' + error.message, 'error');
@@ -366,15 +497,65 @@ async function loadAllTeachersForManagement() {
       role: t.role,
       classAssigned: t.class_assigned || [],
       phone: t.phone,
-      active: t.active
+      active: t.active,
+      created_at: t.created_at
     }));
     
-    renderTeachersTable(formattedTeachers);
+    // Store in cache
+    teachersPaginationState.filteredData = formattedTeachers;
+    
+    renderTeachersTableWithPagination();
   } catch (error) {
     console.error('Load teachers error:', error);
     showToast('Error loading teachers', 'error');
     document.getElementById('teachersList').innerHTML = '<p class="text-center">Error loading teachers</p>';
   }
+}
+
+/**
+ * Render teachers table with pagination
+ */
+function renderTeachersTableWithPagination() {
+  const { currentPage, itemsPerPage, filteredData } = teachersPaginationState;
+  const paginationResult = paginateData(filteredData, currentPage, itemsPerPage);
+  
+  renderTeachersTable(paginationResult.data);
+  
+  // Create pagination controls
+  createPagination(
+    currentPage,
+    paginationResult.totalPages,
+    'changeTeachersPage',
+    'teachersPagination'
+  );
+  
+  // Create pagination info
+  createPaginationInfo(paginationResult, 'teachersPaginationInfo');
+  
+  // Create items per page selector
+  createItemsPerPageSelector(
+    itemsPerPage,
+    'changeTeachersItemsPerPage',
+    'teachersItemsPerPage'
+  );
+}
+
+/**
+ * Change teachers page
+ */
+function changeTeachersPage(page) {
+  teachersPaginationState.currentPage = page;
+  renderTeachersTableWithPagination();
+  document.getElementById('teachersList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Change teachers items per page
+ */
+function changeTeachersItemsPerPage(itemsPerPage) {
+  teachersPaginationState.itemsPerPage = itemsPerPage;
+  teachersPaginationState.currentPage = 1;
+  renderTeachersTableWithPagination();
 }
 
 /**
@@ -390,48 +571,113 @@ function renderTeachersTable(teachers) {
   }
   
   let html = `
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>Name</th>
-          <th>Role</th>
-          <th>Classes Assigned</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Email</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Name</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Role</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Classes Assigned</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Status</th>
+            <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
   
   teachers.forEach(teacher => {
+    const classCount = (teacher.classAssigned || []).length;
+    const roleBadgeColor = teacher.role === 'admin' ? 'badge-danger' : 
+                          teacher.role === 'principal' ? 'badge-warning' : 'badge-info';
+    
     html += `
-      <tr>
-        <td>${teacher.email || ''}</td>
-        <td>${teacher.name || ''}</td>
-        <td>
-          <span class="badge badge-info">${teacher.role || 'teacher'}</span>
+      <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
+          onmouseover="this.style.background='var(--bg-color)'" 
+          onmouseout="this.style.background='transparent'">
+        <td style="padding: 0.75rem;">
+          <div style="font-weight: 500;">${teacher.email || ''}</div>
+          ${teacher.phone ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">📞 ${teacher.phone}</div>` : ''}
         </td>
-        <td>${(teacher.classAssigned || []).join(', ') || 'None'}</td>
-        <td>
-          <span class="badge ${teacher.active ? 'badge-success' : 'badge-danger'}">
-            ${teacher.active ? 'Active' : 'Inactive'}
+        <td style="padding: 0.75rem;">
+          <div style="font-weight: 500;">${teacher.name || ''}</div>
+          ${teacher.created_at ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">Joined: ${new Date(teacher.created_at).toLocaleDateString()}</div>` : ''}
+        </td>
+        <td style="padding: 0.75rem;">
+          <span class="badge ${roleBadgeColor}" style="padding: 0.25rem 0.75rem; border-radius: 0.25rem;">
+            ${teacher.role === 'admin' ? '👑 Admin' : teacher.role === 'principal' ? '🎓 Principal' : '👨‍🏫 Teacher'}
           </span>
         </td>
-        <td>
-          <button class="btn btn-sm btn-primary" onclick="openEditTeacherModal('${teacher.email}')">Edit</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteTeacher('${teacher.email}')">Delete</button>
+        <td style="padding: 0.75rem;">
+          ${classCount > 0 ? `
+            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+              ${(teacher.classAssigned || []).slice(0, 3).map(c => `
+                <span class="badge badge-info" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">${c}</span>
+              `).join('')}
+              ${classCount > 3 ? `<span style="font-size: 0.75rem; color: var(--text-secondary);">+${classCount - 3} more</span>` : ''}
+            </div>
+          ` : '<span style="color: var(--text-secondary); font-style: italic;">No classes assigned</span>'}
+        </td>
+        <td style="padding: 0.75rem;">
+          <span class="badge ${teacher.active ? 'badge-success' : 'badge-danger'}">
+            ${teacher.active ? '✅ Active' : '❌ Inactive'}
+          </span>
+        </td>
+        <td style="padding: 0.75rem; text-align: center;">
+          <div style="display: flex; gap: 0.5rem; justify-content: center;">
+            <button class="btn btn-sm btn-primary" onclick="openEditTeacherModal('${teacher.email}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTeacher('${teacher.email}')" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">🗑️ Delete</button>
+          </div>
         </td>
       </tr>
     `;
   });
   
   html += `
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   `;
   
   container.innerHTML = html;
+}
+
+/**
+ * Search teachers
+ */
+function searchTeachers() {
+  const searchTerm = document.getElementById('teacherSearch')?.value.toLowerCase() || '';
+  filterTeachers();
+}
+
+/**
+ * Filter teachers by role and status
+ */
+function filterTeachers() {
+  const roleFilter = document.getElementById('teacherRoleFilter')?.value || '';
+  const statusFilter = document.getElementById('teacherStatusFilter')?.value || '';
+  const searchTerm = document.getElementById('teacherSearch')?.value.toLowerCase() || '';
+  
+  // Get all teachers from cache (would need to be stored)
+  const allTeachers = teachersPaginationState.filteredData.length > 0 ? 
+    teachersPaginationState.filteredData : 
+    []; // Fallback - would need to reload if empty
+  
+  let filtered = allTeachers.filter(teacher => {
+    const matchesRole = !roleFilter || teacher.role === roleFilter;
+    const matchesStatus = !statusFilter || 
+      (statusFilter === 'active' && teacher.active) ||
+      (statusFilter === 'inactive' && !teacher.active);
+    const matchesSearch = !searchTerm || 
+      (teacher.name || '').toLowerCase().includes(searchTerm) ||
+      (teacher.email || '').toLowerCase().includes(searchTerm);
+    
+    return matchesRole && matchesStatus && matchesSearch;
+  });
+  
+  teachersPaginationState.filteredData = filtered;
+  teachersPaginationState.currentPage = 1;
+  renderTeachersTableWithPagination();
 }
 
 /**

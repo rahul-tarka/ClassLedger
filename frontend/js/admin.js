@@ -8,6 +8,19 @@ let allClasses = [];
 let selectedClass = null;
 let selectedDate = null;
 
+// Pagination state for boards
+let absentStudentsPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 20,
+  allData: []
+};
+
+let teacherAccountabilityPaginationState = {
+  currentPage: 1,
+  itemsPerPage: 20,
+  allData: []
+};
+
 /**
  * Utility functions - Defined early to ensure availability
  */
@@ -367,16 +380,30 @@ async function loadClassReport() {
 }
 
 /**
- * Render absent students list
+ * Render absent students list with pagination
  */
 function renderAbsentStudents(absentStudents) {
   const container = document.getElementById('absentStudents');
   if (!container) return;
   
+  // Update count
+  const countEl = document.getElementById('absentStudentsCount');
+  if (countEl) {
+    countEl.textContent = `${absentStudents.length} Absent Student${absentStudents.length !== 1 ? 's' : ''}`;
+  }
+  
   if (absentStudents.length === 0) {
-    container.innerHTML = '<p class="text-center">No absent students</p>';
+    container.innerHTML = '<p class="text-center">✅ No absent students today</p>';
+    document.getElementById('absentStudentsPagination').innerHTML = '';
     return;
   }
+  
+  // Store all data
+  absentStudentsPaginationState.allData = absentStudents;
+  
+  // Paginate
+  const { currentPage, itemsPerPage } = absentStudentsPaginationState;
+  const paginationResult = paginateData(absentStudents, currentPage, itemsPerPage);
   
   container.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -387,48 +414,74 @@ function renderAbsentStudents(absentStudents) {
         📱 Send Alerts to All
       </button>
     </div>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Roll</th>
-          <th>Name</th>
-          <th>Section</th>
-          <th>Parent Mobile</th>
-          <th>WhatsApp Alert</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${absentStudents.map(student => `
-          <tr>
-            <td>${student.roll}</td>
-            <td><strong>${student.name}</strong></td>
-            <td>${student.section}</td>
-            <td>${student.parentMobile || 'N/A'}</td>
-            <td>
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" 
-                       ${student.whatsappAlertEnabled ? 'checked' : ''}
-                       onchange="toggleWhatsAppAlert('${student.studentId}', this.checked)"
-                       style="cursor: pointer;">
-                <span style="font-size: 0.875rem;">${student.whatsappAlertEnabled ? 'Enabled' : 'Disabled'}</span>
-              </label>
-            </td>
-            <td>
-              <button class="btn btn-sm" onclick="sendTestAlert('${student.studentId}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                Test Alert
-              </button>
-            </td>
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Roll</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Name</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Section</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Parent Mobile</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">WhatsApp Alert</th>
+            <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${paginationResult.data.map(student => `
+            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
+                onmouseover="this.style.background='var(--bg-color)'" 
+                onmouseout="this.style.background='transparent'">
+              <td style="padding: 0.75rem; font-weight: 500;">${student.roll}</td>
+              <td style="padding: 0.75rem;">
+                <strong>${student.name}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Class: ${student.class}</div>
+              </td>
+              <td style="padding: 0.75rem;">${student.section}</td>
+              <td style="padding: 0.75rem;">
+                ${student.parentMobile ? `<a href="tel:${student.parentMobile}" style="color: var(--primary-color); text-decoration: none;">📞 ${student.parentMobile}</a>` : 'N/A'}
+              </td>
+              <td style="padding: 0.75rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="checkbox" 
+                         ${student.whatsappAlertEnabled ? 'checked' : ''}
+                         onchange="toggleWhatsAppAlert('${student.studentId}', this.checked)"
+                         style="cursor: pointer;">
+                  <span style="font-size: 0.875rem;">${student.whatsappAlertEnabled ? '✅ Enabled' : '❌ Disabled'}</span>
+                </label>
+              </td>
+              <td style="padding: 0.75rem; text-align: center;">
+                <button class="btn btn-sm" onclick="sendTestAlert('${student.studentId}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                  📱 Test Alert
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
     <div style="margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 0.5rem; border-left: 4px solid var(--success-color);">
       <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
         <strong>🔧 Admin Controls:</strong> Manage WhatsApp alerts for absent students. Alerts are sent automatically after 10:30 AM IST.
       </p>
     </div>
   `;
+  
+  // Create pagination
+  createPagination(
+    currentPage,
+    paginationResult.totalPages,
+    'changeAbsentStudentsPage',
+    'absentStudentsPagination'
+  );
+}
+
+/**
+ * Change absent students page
+ */
+function changeAbsentStudentsPage(page) {
+  absentStudentsPaginationState.currentPage = page;
+  renderAbsentStudents(absentStudentsPaginationState.allData);
+  document.getElementById('absentStudents')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /**
@@ -634,7 +687,7 @@ function renderAttendanceStats(attendanceData) {
 }
 
 /**
- * Render teacher accountability (who marked attendance, when)
+ * Render teacher accountability (who marked attendance, when) with pagination
  */
 function renderTeacherAccountability(attendanceData) {
   const container = document.getElementById('teacherAccountability');
@@ -670,40 +723,87 @@ function renderTeacherAccountability(attendanceData) {
   
   const teachers = Object.values(accountability);
   
+  // Update count
+  const countEl = document.getElementById('teacherAccountabilityCount');
+  if (countEl) {
+    countEl.textContent = `${teachers.length} Teacher${teachers.length !== 1 ? 's' : ''} Active`;
+  }
+  
   if (teachers.length === 0) {
     container.innerHTML = '<p class="text-center">No attendance marked yet</p>';
+    document.getElementById('teacherAccountabilityPagination').innerHTML = '';
     return;
   }
   
+  // Store all data
+  teacherAccountabilityPaginationState.allData = teachers;
+  
+  // Paginate
+  const { currentPage, itemsPerPage } = teacherAccountabilityPaginationState;
+  const paginationResult = paginateData(teachers, currentPage, itemsPerPage);
+  
   container.innerHTML = `
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Teacher Email</th>
-          <th>Students Marked</th>
-          <th>Earliest Time</th>
-          <th>Latest Time</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${teachers.map(teacher => {
-          const isLate = parseTime(teacher.latestTime) > parseTime('10:30');
-          return `
-            <tr>
-              <td>${teacher.email}</td>
-              <td>${teacher.count}</td>
-              <td>${teacher.earliestTime}</td>
-              <td>${teacher.latestTime}</td>
-              <td>
-                ${isLate ? '<span style="color: var(--warning-color);">Late Submission</span>' : '<span style="color: var(--success-color);">On Time</span>'}
-              </td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
+    <div style="overflow-x: auto;">
+      <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--bg-color); border-bottom: 2px solid var(--border-color);">
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Teacher Email</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Students Marked</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Earliest Time</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Latest Time</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${paginationResult.data.map(teacher => {
+            const isLate = parseTime(teacher.latestTime) > parseTime('10:30');
+            return `
+              <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
+                  onmouseover="this.style.background='var(--bg-color)'" 
+                  onmouseout="this.style.background='transparent'">
+                <td style="padding: 0.75rem;">
+                  <div style="font-weight: 500;">${teacher.email}</div>
+                </td>
+                <td style="padding: 0.75rem;">
+                  <span class="badge badge-info" style="padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-weight: 600;">
+                    ${teacher.count} student${teacher.count !== 1 ? 's' : ''}
+                  </span>
+                </td>
+                <td style="padding: 0.75rem;">
+                  <span style="color: var(--success-color); font-weight: 500;">⏰ ${teacher.earliestTime}</span>
+                </td>
+                <td style="padding: 0.75rem;">
+                  <span style="color: ${isLate ? 'var(--warning-color)' : 'var(--success-color)'}; font-weight: 500;">⏰ ${teacher.latestTime}</span>
+                </td>
+                <td style="padding: 0.75rem;">
+                  ${isLate ? 
+                    '<span class="badge badge-warning" style="padding: 0.25rem 0.75rem; border-radius: 0.25rem;">⚠️ Late Submission</span>' : 
+                    '<span class="badge badge-success" style="padding: 0.25rem 0.75rem; border-radius: 0.25rem;">✅ On Time</span>'}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
+  
+  // Create pagination
+  createPagination(
+    currentPage,
+    paginationResult.totalPages,
+    'changeTeacherAccountabilityPage',
+    'teacherAccountabilityPagination'
+  );
+}
+
+/**
+ * Change teacher accountability page
+ */
+function changeTeacherAccountabilityPage(page) {
+  teacherAccountabilityPaginationState.currentPage = page;
+  renderTeacherAccountability({}); // Will use cached data
+  document.getElementById('teacherAccountability')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /**
