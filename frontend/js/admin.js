@@ -371,6 +371,9 @@ async function loadClassReport() {
     
     renderAbsentStudents(absentStudents);
     renderAttendanceStats(attendanceData);
+    
+    // Store attendance data for teacher accountability
+    window.currentAttendanceData = attendanceData;
     renderTeacherAccountability(attendanceData);
   } catch (error) {
     console.error('Load report error:', error);
@@ -802,7 +805,9 @@ function renderTeacherAccountability(attendanceData) {
  */
 function changeTeacherAccountabilityPage(page) {
   teacherAccountabilityPaginationState.currentPage = page;
-  renderTeacherAccountability({}); // Will use cached data
+  // Use cached attendance data
+  const attendanceData = window.currentAttendanceData || {};
+  renderTeacherAccountability(attendanceData);
   document.getElementById('teacherAccountability')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
