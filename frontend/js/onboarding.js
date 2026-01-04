@@ -689,23 +689,102 @@ function previousStep(from) {
 }
 
 /**
- * Complete onboarding
+ * Complete onboarding - Save all data and redirect
  */
-function completeOnboarding() {
-  // Store onboarding complete flag
-  localStorage.setItem('onboarding_complete', 'true');
-  
-  // Redirect to login
-  window.location.href = 'login.html';
+async function completeOnboarding() {
+  try {
+    showLoading('Finalizing setup...');
+    
+    // All data should already be saved in database during onboarding steps
+    // Just verify and redirect
+    
+    const supabase = getSupabase();
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+    
+    // Verify school exists
+    if (!onboardingData.school || !onboardingData.school.school_id) {
+      throw new Error('School not created. Please complete step 1.');
+    }
+    
+    // Verify admin exists
+    if (!onboardingData.admin || !onboardingData.admin.email) {
+      throw new Error('Admin not created. Please complete step 1.');
+    }
+    
+    // Store onboarding complete flag
+    localStorage.setItem('onboarding_complete', 'true');
+    
+    showToast('Setup completed successfully! Redirecting to login...', 'success');
+    
+    // Redirect to login after short delay
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 1500);
+  } catch (error) {
+    console.error('Complete onboarding error:', error);
+    showToast('Error completing setup: ' + error.message, 'error');
+    hideLoading();
+  }
 }
 
 /**
  * Skip onboarding
  */
-function skipOnboarding() {
-  if (confirm('Are you sure you want to skip setup? You can set up your school later from the admin dashboard.')) {
+async function skipOnboarding() {
+  const confirmed = await showConfirmDialog(
+    'Are you sure you want to skip setup? You can set up your school later from the admin dashboard.',
+    'Skip Setup'
+  );
+  
+  if (confirmed) {
+    localStorage.setItem('onboarding_complete', 'true');
     window.location.href = 'login.html';
   }
+}
+
+/**
+ * Show confirm dialog (card-based)
+ */
+function showConfirmDialog(message, title = 'Confirm') {
+  return new Promise((resolve) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; max-width: 400px; width: 90%; background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+    card.innerHTML = `
+      <h3 style="margin-bottom: 1rem;">${title}</h3>
+      <p style="margin-bottom: 1.5rem; color: #666;">${message}</p>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+        <button class="btn btn-primary" id="confirmOk">OK</button>
+      </div>
+    `;
+    
+    document.body.appendChild(card);
+    
+    // Handle OK
+    card.querySelector('#confirmOk').addEventListener('click', () => {
+      card.remove();
+      resolve(true);
+    });
+    
+    // Handle Cancel
+    card.querySelector('#confirmCancel').addEventListener('click', () => {
+      card.remove();
+      resolve(false);
+    });
+    
+    // Handle Escape key
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        card.remove();
+        document.removeEventListener('keydown', handleEscape);
+        resolve(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+  });
 }
 
 /**

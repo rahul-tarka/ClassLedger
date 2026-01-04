@@ -989,19 +989,44 @@ function renderDateRangeReport(report) {
       
       if (dailyDataArray.length > 0) {
         const analytics = renderAnalytics(dailyDataArray, []);
-        analyticsHtml = `
+        // Use the full analytics HTML from renderAnalytics
+        analyticsHtml = analytics.html || `
           <div style="margin-top: 2rem;">
-            <h4>Analytics</h4>
+            <h4>Analytics & Insights</h4>
             ${analytics.trends?.direction ? `
-              <p class="${analytics.trends.direction === 'up' ? 'trend-up' : analytics.trends.direction === 'down' ? 'trend-down' : 'trend-neutral'}">
-                Trend: ${analytics.trends.direction === 'up' ? '↑' : analytics.trends.direction === 'down' ? '↓' : '→'} 
-                ${analytics.trends.change ? '(' + analytics.trends.change + '%)' : ''}
-              </p>
+              <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem; margin-top: 1rem;">
+                <strong>Trend Analysis:</strong>
+                <p class="${analytics.trends.direction === 'up' ? 'trend-up' : analytics.trends.direction === 'down' ? 'trend-down' : 'trend-neutral'}" style="margin-top: 0.5rem;">
+                  ${analytics.trends.direction === 'up' ? '↑' : analytics.trends.direction === 'down' ? '↓' : '→'} 
+                  ${analytics.trends.change ? analytics.trends.change + '%' : '0%'} - ${analytics.trends.message || 'Stable'}
+                </p>
+              </div>
             ` : ''}
-            ${analytics.anomalies?.length > 0 ? `
-              <div style="margin-top: 1rem;">
-                <strong>Anomalies:</strong>
-                ${analytics.anomalies.map(a => `<div class="anomaly-alert">${a.message}</div>`).join('')}
+            ${analytics.metrics ? `
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Average Attendance</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${analytics.metrics.avgAttendance}%</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Best Day</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--success-color);">${analytics.metrics.bestDay?.rate || '0'}%</div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">${analytics.metrics.bestDay?.date ? formatDate(analytics.metrics.bestDay.date) : 'N/A'}</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg-color); border-radius: 0.5rem;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Consistency</div>
+                  <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning-color);">${analytics.metrics.consistency || '0'}%</div>
+                </div>
+              </div>
+            ` : ''}
+            ${analytics.anomalies && analytics.anomalies.length > 0 ? `
+              <div style="margin-top: 1.5rem;">
+                <h4>Anomalies Detected</h4>
+                ${analytics.anomalies.map(a => `
+                  <div class="anomaly-alert" style="padding: 0.75rem; margin-top: 0.5rem; background: ${a.type === 'low' ? '#fff3cd' : '#d1ecf1'}; border-left: 4px solid ${a.type === 'low' ? '#ffc107' : '#0c5460'}; border-radius: 0.25rem;">
+                    <strong>${formatDate(a.date)}</strong>: ${a.type === 'low' ? 'Low' : 'High'} attendance (${a.rate}% vs expected ${a.expected}%)
+                  </div>
+                `).join('')}
               </div>
             ` : ''}
           </div>

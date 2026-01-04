@@ -253,9 +253,23 @@ async function exportReportToExcel() {
     // Header
     rows.push(['Date', 'Total Students', 'Present', 'Absent', 'Late', 'Attendance %']);
     
-    // Data rows
-    if (reportData.dailyData && Array.isArray(reportData.dailyData)) {
-      reportData.dailyData.forEach(day => {
+    // Data rows - handle both array and object formats
+    if (reportData.dailyData) {
+      let dailyDataArray = [];
+      
+      if (Array.isArray(reportData.dailyData)) {
+        dailyDataArray = reportData.dailyData;
+      } else if (typeof reportData.dailyData === 'object') {
+        // Convert object to array
+        dailyDataArray = Object.keys(reportData.dailyData).map(date => ({
+          date: date,
+          present: reportData.dailyData[date].present || 0,
+          absent: reportData.dailyData[date].absent || 0,
+          late: reportData.dailyData[date].late || 0
+        })).sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+      
+      dailyDataArray.forEach(day => {
         const total = (day.present || 0) + (day.absent || 0) + (day.late || 0);
         const percentage = total > 0 ? ((day.present || 0) / total * 100).toFixed(2) : 0;
         rows.push([
