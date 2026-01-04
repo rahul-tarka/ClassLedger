@@ -292,27 +292,71 @@ function filterStudents() {
 }
 
 /**
- * Open add student modal
+ * Open add student card
  */
 function openAddStudentModal() {
-  // Simple prompt for now, can be enhanced with proper modal
-  const name = prompt('Enter student name:');
-  if (!name) return;
+  const card = document.getElementById('studentFormCard');
+  const form = document.getElementById('studentForm');
+  const title = document.getElementById('studentFormTitle');
   
-  const className = prompt('Enter class:');
-  if (!className) return;
+  if (!card || !form) return;
   
-  const section = prompt('Enter section:') || 'A';
-  const roll = prompt('Enter roll number:') || '1';
-  const parentMobile = prompt('Enter parent mobile:') || '';
+  // Reset form
+  form.reset();
+  document.getElementById('studentFormStudentId').value = '';
+  document.getElementById('studentFormActive').checked = true;
+  title.textContent = 'Add Student';
   
-  addStudent({
-    name,
-    class: className,
-    section,
-    roll: parseInt(roll) || 1,
-    parentMobile
-  });
+  // Show card
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Focus first input
+  setTimeout(() => document.getElementById('studentFormName')?.focus(), 100);
+}
+
+/**
+ * Close student form card
+ */
+function closeStudentFormCard() {
+  const card = document.getElementById('studentFormCard');
+  if (card) {
+    card.style.display = 'none';
+    document.getElementById('studentForm').reset();
+  }
+}
+
+/**
+ * Handle student form submit
+ */
+async function handleStudentFormSubmit(e) {
+  e.preventDefault();
+  
+  const studentId = document.getElementById('studentFormStudentId').value;
+  const formData = {
+    name: document.getElementById('studentFormName').value.trim(),
+    class: document.getElementById('studentFormClass').value.trim(),
+    section: document.getElementById('studentFormSection').value.trim(),
+    roll: parseInt(document.getElementById('studentFormRoll').value) || 1,
+    parentName: document.getElementById('studentFormParentName').value.trim() || null,
+    parentMobile: document.getElementById('studentFormParentMobile').value.trim() || null,
+    active: document.getElementById('studentFormActive').checked
+  };
+  
+  if (!formData.name || !formData.class || !formData.section) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  if (studentId) {
+    // Update existing student
+    await updateStudent(studentId, formData);
+  } else {
+    // Add new student
+    await addStudent(formData);
+  }
+  
+  closeStudentFormCard();
 }
 
 /**
@@ -356,7 +400,7 @@ async function addStudent(studentData) {
 }
 
 /**
- * Open edit student modal
+ * Open edit student card
  */
 function openEditStudentModal(studentId) {
   const student = allStudentsCache.find(s => s.studentId === studentId);
@@ -365,25 +409,30 @@ function openEditStudentModal(studentId) {
     return;
   }
   
-  const name = prompt('Enter student name:', student.name || '');
-  if (name === null) return;
+  const card = document.getElementById('studentFormCard');
+  const form = document.getElementById('studentForm');
+  const title = document.getElementById('studentFormTitle');
   
-  const className = prompt('Enter class:', student.class || '');
-  if (className === null) return;
+  if (!card || !form) return;
   
-  const section = prompt('Enter section:', student.section || 'A');
-  const roll = prompt('Enter roll number:', student.roll || '1');
-  const parentMobile = prompt('Enter parent mobile:', student.parentMobile || '');
-  const active = confirm('Is student active?') ? 'true' : 'false';
+  // Populate form
+  document.getElementById('studentFormStudentId').value = student.studentId;
+  document.getElementById('studentFormName').value = student.name || '';
+  document.getElementById('studentFormClass').value = student.class || '';
+  document.getElementById('studentFormSection').value = student.section || 'A';
+  document.getElementById('studentFormRoll').value = student.roll || 1;
+  document.getElementById('studentFormParentName').value = student.parentName || '';
+  document.getElementById('studentFormParentMobile').value = student.parentMobile || '';
+  document.getElementById('studentFormActive').checked = student.active !== false;
   
-  updateStudent(studentId, {
-    name,
-    class: className,
-    section,
-    roll: parseInt(roll) || 1,
-    parentMobile,
-    active
-  });
+  title.textContent = 'Edit Student';
+  
+  // Show card
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Focus first input
+  setTimeout(() => document.getElementById('studentFormName')?.focus(), 100);
 }
 
 /**
@@ -407,7 +456,7 @@ async function updateStudent(studentId, studentData) {
         roll: studentData.roll,
         parent_mobile: studentData.parentMobile || null,
         parent_name: studentData.parentName || null,
-        active: studentData.active !== 'false',
+        active: studentData.active === 'true' || studentData.active === true,
         updated_at: new Date().toISOString()
       })
       .eq('student_id', studentId)
@@ -695,24 +744,79 @@ function filterTeachers() {
 }
 
 /**
- * Open add teacher modal
+ * Open add teacher card
  */
 function openAddTeacherModal() {
-  const email = prompt('Enter teacher email:');
-  if (!email) return;
+  const card = document.getElementById('teacherFormCard');
+  const form = document.getElementById('teacherForm');
+  const title = document.getElementById('teacherFormTitle');
   
-  const name = prompt('Enter teacher name:');
-  if (!name) return;
+  if (!card || !form) return;
   
-  const role = prompt('Enter role (teacher/admin/principal):', 'teacher') || 'teacher';
-  const classes = prompt('Enter classes (comma-separated):', '') || '';
+  // Reset form
+  form.reset();
+  document.getElementById('teacherFormEmail').value = '';
+  document.getElementById('teacherFormEmailInput').disabled = false;
+  document.getElementById('teacherFormActive').checked = true;
+  document.getElementById('teacherFormRole').value = 'teacher';
+  title.textContent = 'Add Teacher';
   
-  addTeacher({
-    email,
-    name,
-    role,
-    classAssigned: classes.split(',').map(c => c.trim()).filter(c => c)
-  });
+  // Show card
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Focus first input
+  setTimeout(() => document.getElementById('teacherFormName')?.focus(), 100);
+}
+
+/**
+ * Close teacher form card
+ */
+function closeTeacherFormCard() {
+  const card = document.getElementById('teacherFormCard');
+  if (card) {
+    card.style.display = 'none';
+    document.getElementById('teacherForm').reset();
+  }
+}
+
+/**
+ * Handle teacher form submit
+ */
+async function handleTeacherFormSubmit(e) {
+  e.preventDefault();
+  
+  const oldEmail = document.getElementById('teacherFormEmail').value;
+  const formData = {
+    email: document.getElementById('teacherFormEmailInput').value.trim(),
+    name: document.getElementById('teacherFormName').value.trim(),
+    role: document.getElementById('teacherFormRole').value,
+    phone: document.getElementById('teacherFormPhone').value.trim() || null,
+    classAssigned: document.getElementById('teacherFormClasses').value.split(',').map(c => c.trim()).filter(c => c),
+    active: document.getElementById('teacherFormActive').checked
+  };
+  
+  if (!formData.email || !formData.name) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  if (oldEmail) {
+    // Update existing teacher
+    await updateTeacherFromForm(oldEmail, formData);
+  } else {
+    // Add new teacher
+    await addTeacher(formData);
+  }
+  
+  closeTeacherFormCard();
+}
+
+/**
+ * Update teacher from form
+ */
+async function updateTeacherFromForm(oldEmail, formData) {
+  await updateTeacherData(oldEmail, formData);
 }
 
 /**
@@ -762,12 +866,18 @@ async function addTeacher(teacherData) {
 }
 
 /**
- * Open edit teacher modal
+ * Open edit teacher card
  */
-async function openEditTeacherModal(email) {
+async function openEditTeacherModal(email, formDataFromSubmit = null) {
   try {
     const supabase = getSupabase();
     const user = getCurrentUser();
+    
+    // If formDataFromSubmit is provided, use it directly (from form submit)
+    if (formDataFromSubmit) {
+      await updateTeacherData(email, formDataFromSubmit);
+      return;
+    }
     
     const { data: teacher, error } = await supabase
       .from('teachers')
@@ -781,66 +891,68 @@ async function openEditTeacherModal(email) {
       return;
     }
     
-    const name = prompt('Enter teacher name:', teacher.name || '');
-    if (!name) return;
+    const card = document.getElementById('teacherFormCard');
+    const form = document.getElementById('teacherForm');
+    const title = document.getElementById('teacherFormTitle');
     
-    const newEmail = prompt('Enter teacher email:', teacher.email || '');
-    if (!newEmail) return;
+    if (!card || !form) return;
     
-    const role = prompt('Enter role (teacher/admin/principal):', teacher.role || 'teacher') || 'teacher';
-    const classes = prompt('Enter classes (comma-separated):', (teacher.class_assigned || []).join(', ')) || '';
-    const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
+    // Populate form
+    document.getElementById('teacherFormEmail').value = teacher.email;
+    document.getElementById('teacherFormEmailInput').value = teacher.email;
+    document.getElementById('teacherFormEmailInput').disabled = true; // Can't change email (primary key)
+    document.getElementById('teacherFormName').value = teacher.name || '';
+    document.getElementById('teacherFormRole').value = teacher.role || 'teacher';
+    document.getElementById('teacherFormPhone').value = teacher.phone || '';
+    document.getElementById('teacherFormClasses').value = (teacher.class_assigned || []).join(', ');
+    document.getElementById('teacherFormActive').checked = teacher.active !== false;
     
-    const phone = prompt('Enter phone (optional):', teacher.phone || '') || null;
+    title.textContent = 'Edit Teacher';
     
+    // Show card
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    // Focus first input
+    setTimeout(() => document.getElementById('teacherFormName')?.focus(), 100);
+  } catch (error) {
+    console.error('Open edit teacher error:', error);
+    showToast('Error loading teacher: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Update teacher data
+ */
+async function updateTeacherData(oldEmail, formData) {
+  try {
     showLoading('Updating teacher...');
     
+    const supabase = getSupabase();
+    const user = getCurrentUser();
+    
     const updateData = {
-      name,
-      role,
-      phone,
-      class_assigned: classAssigned,
+      name: formData.name,
+      role: formData.role,
+      phone: formData.phone,
+      class_assigned: formData.classAssigned || [],
+      active: formData.active !== false,
       updated_at: new Date().toISOString()
     };
     
-    // If email changed, need to handle it carefully (email is primary key)
-    if (newEmail !== email) {
-      // Check if new email already exists
-      const { data: existing } = await supabase
-        .from('teachers')
-        .select('email')
-        .eq('email', newEmail)
-        .single();
-      
-      if (existing) {
-        showToast('Email already exists. Please use a different email.', 'error');
-        hideLoading();
-        return;
-      }
-      
-      // Delete old and insert new (since email is primary key)
-      await supabase.from('teachers').delete().eq('email', email).eq('school_id', user.schoolId);
-      await supabase.from('teachers').insert({
-        email: newEmail,
-        school_id: user.schoolId,
-        name,
-        role,
-        phone,
-        class_assigned: classAssigned,
-        active: teacher.active
-      });
-    } else {
-      await supabase
-        .from('teachers')
-        .update(updateData)
-        .eq('email', email)
-        .eq('school_id', user.schoolId);
-    }
+    // Email cannot be changed (it's the primary key)
+    // If user wants to change email, they need to delete and recreate
+    
+    await supabase
+      .from('teachers')
+      .update(updateData)
+      .eq('email', oldEmail)
+      .eq('school_id', user.schoolId);
     
     showToast('Teacher updated successfully!', 'success');
     await loadAllTeachersForManagement();
   } catch (error) {
-    console.error('Edit teacher error:', error);
+    console.error('Update teacher error:', error);
     showToast('Error updating teacher: ' + error.message, 'error');
   } finally {
     hideLoading();
