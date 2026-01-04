@@ -478,7 +478,7 @@ async function markAttendance(studentId, status) {
 async function editAttendance(logId, newStatus) {
   let remark = '';
   if (newStatus === 'L') {
-    remark = await getLateRemarkInput() || '';
+    remark = await getLateRemarkInput();
   }
   
   try {
