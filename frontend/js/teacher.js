@@ -327,6 +327,50 @@ function updateStudentButtons() {
 }
 
 /**
+ * Get late remark input (card-based)
+ */
+function getLateRemarkInput() {
+  return new Promise((resolve) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; max-width: 400px; width: 90%; background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+    card.innerHTML = `
+      <h3 style="margin-bottom: 1rem;">Late Arrival Reason</h3>
+      <p style="color: #666; margin-bottom: 1rem; font-size: 0.875rem;">Enter reason for late arrival (optional)</p>
+      <textarea id="lateRemarkInput" class="form-input" rows="3" placeholder="Enter reason..." style="width: 100%; margin-bottom: 1rem;"></textarea>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="this.closest('.card').remove(); window.__lateRemarkResult = '';">Skip</button>
+        <button class="btn btn-primary" onclick="window.__lateRemarkResult = document.getElementById('lateRemarkInput').value.trim(); this.closest('.card').remove();">Save</button>
+      </div>
+    `;
+    
+    document.body.appendChild(card);
+    
+    // Focus textarea
+    setTimeout(() => document.getElementById('lateRemarkInput')?.focus(), 100);
+    
+    // Handle save
+    card.querySelector('.btn-primary').addEventListener('click', () => {
+      const remark = document.getElementById('lateRemarkInput').value.trim();
+      resolve(remark);
+    });
+    
+    // Handle skip
+    card.querySelector('.btn-secondary').addEventListener('click', () => {
+      resolve('');
+    });
+    
+    // Handle Enter key
+    card.querySelector('#lateRemarkInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        card.querySelector('.btn-primary').click();
+      }
+    });
+  });
+}
+
+/**
  * Check if attendance can be edited (within 15 minutes)
  */
 function canEdit(timeString) {
@@ -374,10 +418,10 @@ async function markAttendance(studentId, status) {
     return;
   }
   
-  // Show remark modal for late students
+  // Show remark card for late students
   let remark = '';
   if (status === 'L') {
-    remark = prompt('Enter reason for late arrival (optional):') || '';
+    remark = await getLateRemarkInput();
   }
   
   try {
@@ -434,7 +478,7 @@ async function markAttendance(studentId, status) {
 async function editAttendance(logId, newStatus) {
   let remark = '';
   if (newStatus === 'L') {
-    remark = prompt('Enter reason for late arrival (optional):') || '';
+    remark = await getLateRemarkInput() || '';
   }
   
   try {
