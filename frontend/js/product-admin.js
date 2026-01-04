@@ -710,13 +710,46 @@ function closeEditFormCard() {
  * Add School Admin
  */
 async function addSchoolAdmin(schoolId) {
-  const name = prompt('Enter admin name:');
-  if (!name) return;
+  const formHTML = `
+    <form id="addAdminForm" onsubmit="handleAddAdminSubmit(event, '${schoolId}')">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" id="addAdminName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="addAdminEmail" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="addAdminPhone" class="form-input">
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary">Add Admin</button>
+        <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+      </div>
+    </form>
+  `;
   
-  const email = prompt('Enter admin email:');
-  if (!email) return;
+  showEditFormCard('addAdmin', 'Add School Admin', formHTML);
+}
+
+/**
+ * Handle add admin form submit
+ */
+async function handleAddAdminSubmit(e, schoolId) {
+  e.preventDefault();
   
-  const phone = prompt('Enter admin phone (optional):') || null;
+  const name = document.getElementById('addAdminName').value.trim();
+  const email = document.getElementById('addAdminEmail').value.trim();
+  const phone = document.getElementById('addAdminPhone').value.trim() || null;
+  
+  if (!name || !email) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
   
   try {
     showLoading('Adding school admin...');
@@ -737,6 +770,7 @@ async function addSchoolAdmin(schoolId) {
     if (error) throw error;
     
     showToast('School admin added successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
@@ -751,13 +785,46 @@ async function addSchoolAdmin(schoolId) {
  * Add Principal
  */
 async function addPrincipal(schoolId) {
-  const name = prompt('Enter principal name:');
-  if (!name) return;
+  const formHTML = `
+    <form id="addPrincipalForm" onsubmit="handleAddPrincipalSubmit(event, '${schoolId}')">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" id="addPrincipalName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="addPrincipalEmail" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="addPrincipalPhone" class="form-input">
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary">Add Principal</button>
+        <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+      </div>
+    </form>
+  `;
   
-  const email = prompt('Enter principal email:');
-  if (!email) return;
+  showEditFormCard('addPrincipal', 'Add Principal', formHTML);
+}
+
+/**
+ * Handle add principal form submit
+ */
+async function handleAddPrincipalSubmit(e, schoolId) {
+  e.preventDefault();
   
-  const phone = prompt('Enter principal phone (optional):') || null;
+  const name = document.getElementById('addPrincipalName').value.trim();
+  const email = document.getElementById('addPrincipalEmail').value.trim();
+  const phone = document.getElementById('addPrincipalPhone').value.trim() || null;
+  
+  if (!name || !email) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
   
   try {
     showLoading('Adding principal...');
@@ -778,6 +845,7 @@ async function addPrincipal(schoolId) {
     if (error) throw error;
     
     showToast('Principal added successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
@@ -792,16 +860,53 @@ async function addPrincipal(schoolId) {
  * Add Teacher
  */
 async function addTeacher(schoolId) {
-  const name = prompt('Enter teacher name:');
-  if (!name) return;
+  const formHTML = `
+    <form id="addTeacherForm" onsubmit="handleAddTeacherSubmit(event, '${schoolId}')">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" id="addTeacherName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="addTeacherEmail" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="addTeacherPhone" class="form-input">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Assigned Classes (comma-separated)</label>
+          <input type="text" id="addTeacherClasses" class="form-input" placeholder="Class 1, Class 2, Class 3">
+          <small style="color: #666;">Enter class names separated by commas</small>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary">Add Teacher</button>
+        <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+      </div>
+    </form>
+  `;
   
-  const email = prompt('Enter teacher email:');
-  if (!email) return;
+  showEditFormCard('addTeacher', 'Add Teacher', formHTML);
+}
+
+/**
+ * Handle add teacher form submit
+ */
+async function handleAddTeacherSubmit(e, schoolId) {
+  e.preventDefault();
   
-  const classes = prompt('Enter assigned classes (comma-separated, optional):') || '';
+  const name = document.getElementById('addTeacherName').value.trim();
+  const email = document.getElementById('addTeacherEmail').value.trim();
+  const phone = document.getElementById('addTeacherPhone').value.trim() || null;
+  const classes = document.getElementById('addTeacherClasses').value.trim();
   const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
   
-  const phone = prompt('Enter teacher phone (optional):') || null;
+  if (!name || !email) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
   
   try {
     showLoading('Adding teacher...');
@@ -822,6 +927,7 @@ async function addTeacher(schoolId) {
     if (error) throw error;
     
     showToast('Teacher added successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
@@ -836,20 +942,61 @@ async function addTeacher(schoolId) {
  * Add Student
  */
 async function addStudent(schoolId) {
-  const name = prompt('Enter student name:');
-  if (!name) return;
+  const formHTML = `
+    <form id="addStudentForm" onsubmit="handleAddStudentSubmit(event, '${schoolId}')">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" id="addStudentName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Class *</label>
+          <input type="text" id="addStudentClass" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Section *</label>
+          <input type="text" id="addStudentSection" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>Roll Number *</label>
+          <input type="number" id="addStudentRoll" class="form-input" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Parent Name</label>
+          <input type="text" id="addStudentParentName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Parent Mobile</label>
+          <input type="tel" id="addStudentParentMobile" class="form-input">
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary">Add Student</button>
+        <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+      </div>
+    </form>
+  `;
   
-  const className = prompt('Enter class:');
-  if (!className) return;
+  showEditFormCard('addStudent', 'Add Student', formHTML);
+}
+
+/**
+ * Handle add student form submit
+ */
+async function handleAddStudentSubmit(e, schoolId) {
+  e.preventDefault();
   
-  const section = prompt('Enter section:');
-  if (!section) return;
+  const name = document.getElementById('addStudentName').value.trim();
+  const className = document.getElementById('addStudentClass').value.trim();
+  const section = document.getElementById('addStudentSection').value.trim();
+  const roll = parseInt(document.getElementById('addStudentRoll').value) || 0;
+  const parentName = document.getElementById('addStudentParentName').value.trim() || null;
+  const parentMobile = document.getElementById('addStudentParentMobile').value.trim() || null;
   
-  const roll = parseInt(prompt('Enter roll number:'));
-  if (!roll) return;
-  
-  const parentName = prompt('Enter parent name (optional):') || null;
-  const parentMobile = prompt('Enter parent mobile (optional):') || null;
+  if (!name || !className || !section || !roll) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
   
   try {
     showLoading('Adding student...');
@@ -875,6 +1022,7 @@ async function addStudent(schoolId) {
     if (error) throw error;
     
     showToast('Student added successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
@@ -1062,15 +1210,55 @@ async function editPrincipal(email, schoolId) {
       return;
     }
     
-    const name = prompt('Enter principal name:', principal.name || '');
-    if (!name) return;
+    const formHTML = `
+      <form id="editPrincipalForm" onsubmit="handleEditPrincipalSubmit(event, '${email}', '${schoolId}')">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="editPrincipalName" class="form-input" value="${principal.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="editPrincipalEmail" class="form-input" value="${principal.email || ''}" required>
+            <small style="color: #666;">Note: Changing email will recreate the principal record</small>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="editPrincipalPhone" class="form-input" value="${principal.phone || ''}">
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+        </div>
+      </form>
+    `;
     
-    const newEmail = prompt('Enter principal email:', principal.email || '');
-    if (!newEmail) return;
-    
-    const phone = prompt('Enter principal phone (optional):', principal.phone || '') || null;
-    
+    showEditFormCard('principal', 'Edit Principal', formHTML);
+  } catch (error) {
+    console.error('Edit principal error:', error);
+    showToast('Error loading principal: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle edit principal form submit
+ */
+async function handleEditPrincipalSubmit(e, oldEmail, schoolId) {
+  e.preventDefault();
+  
+  const name = document.getElementById('editPrincipalName').value.trim();
+  const newEmail = document.getElementById('editPrincipalEmail').value.trim();
+  const phone = document.getElementById('editPrincipalPhone').value.trim() || null;
+  
+  if (!name || !newEmail) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  try {
     showLoading('Updating principal...');
+    const supabase = getSupabase();
     
     const updateData = {
       name,
@@ -1079,7 +1267,7 @@ async function editPrincipal(email, schoolId) {
     };
     
     // If email changed, need to handle it carefully (email is primary key)
-    if (newEmail !== email) {
+    if (newEmail !== oldEmail) {
       // Check if new email already exists
       const { data: existing } = await supabase
         .from('teachers')
@@ -1093,30 +1281,39 @@ async function editPrincipal(email, schoolId) {
         return;
       }
       
+      // Get old principal data
+      const { data: oldPrincipal } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('email', oldEmail)
+        .eq('school_id', schoolId)
+        .single();
+      
       // Delete old and insert new (since email is primary key)
-      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').delete().eq('email', oldEmail).eq('school_id', schoolId);
       await supabase.from('teachers').insert({
         email: newEmail,
         school_id: schoolId,
         name,
         role: 'principal',
         phone,
-        class_assigned: principal.class_assigned || [],
-        active: principal.active
+        class_assigned: oldPrincipal?.class_assigned || [],
+        active: oldPrincipal?.active !== false
       });
     } else {
       await supabase
         .from('teachers')
         .update(updateData)
-        .eq('email', email)
+        .eq('email', oldEmail)
         .eq('school_id', schoolId);
     }
     
     showToast('Principal updated successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
-    console.error('Edit principal error:', error);
+    console.error('Update principal error:', error);
     showToast('Error updating principal: ' + error.message, 'error');
   } finally {
     hideLoading();
@@ -1124,7 +1321,12 @@ async function editPrincipal(email, schoolId) {
 }
 
 async function deletePrincipal(email, schoolId) {
-  if (!confirm(`Are you sure you want to delete principal ${email}?`)) return;
+  if (!window.confirmDialog) {
+    if (!confirm(`Are you sure you want to delete principal ${email}?`)) return;
+  } else {
+    const confirmed = await window.confirmDialog(`Are you sure you want to delete principal ${email}?`, 'Confirm Delete');
+    if (!confirmed) return;
+  }
   
   try {
     showLoading('Deleting principal...');
@@ -1167,18 +1369,62 @@ async function editTeacher(email, schoolId) {
       return;
     }
     
-    const name = prompt('Enter teacher name:', teacher.name || '');
-    if (!name) return;
+    const formHTML = `
+      <form id="editTeacherForm" onsubmit="handleEditTeacherSubmit(event, '${email}', '${schoolId}')">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="editTeacherName" class="form-input" value="${teacher.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="editTeacherEmail" class="form-input" value="${teacher.email || ''}" required>
+            <small style="color: #666;">Note: Changing email will recreate the teacher record</small>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="editTeacherPhone" class="form-input" value="${teacher.phone || ''}">
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Assigned Classes (comma-separated)</label>
+            <input type="text" id="editTeacherClasses" class="form-input" value="${(teacher.class_assigned || []).join(', ')}" placeholder="Class 1, Class 2, Class 3">
+            <small style="color: #666;">Enter class names separated by commas</small>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+        </div>
+      </form>
+    `;
     
-    const newEmail = prompt('Enter teacher email:', teacher.email || '');
-    if (!newEmail) return;
-    
-    const classes = prompt('Enter assigned classes (comma-separated):', (teacher.class_assigned || []).join(', ')) || '';
-    const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
-    
-    const phone = prompt('Enter teacher phone (optional):', teacher.phone || '') || null;
-    
+    showEditFormCard('teacher', 'Edit Teacher', formHTML);
+  } catch (error) {
+    console.error('Edit teacher error:', error);
+    showToast('Error loading teacher: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle edit teacher form submit
+ */
+async function handleEditTeacherSubmit(e, oldEmail, schoolId) {
+  e.preventDefault();
+  
+  const name = document.getElementById('editTeacherName').value.trim();
+  const newEmail = document.getElementById('editTeacherEmail').value.trim();
+  const phone = document.getElementById('editTeacherPhone').value.trim() || null;
+  const classes = document.getElementById('editTeacherClasses').value.trim();
+  const classAssigned = classes ? classes.split(',').map(c => c.trim()).filter(c => c) : [];
+  
+  if (!name || !newEmail) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  try {
     showLoading('Updating teacher...');
+    const supabase = getSupabase();
     
     const updateData = {
       name,
@@ -1188,7 +1434,7 @@ async function editTeacher(email, schoolId) {
     };
     
     // If email changed, need to handle it carefully (email is primary key)
-    if (newEmail !== email) {
+    if (newEmail !== oldEmail) {
       // Check if new email already exists
       const { data: existing } = await supabase
         .from('teachers')
@@ -1202,8 +1448,16 @@ async function editTeacher(email, schoolId) {
         return;
       }
       
+      // Get old teacher data
+      const { data: oldTeacher } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('email', oldEmail)
+        .eq('school_id', schoolId)
+        .single();
+      
       // Delete old and insert new (since email is primary key)
-      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').delete().eq('email', oldEmail).eq('school_id', schoolId);
       await supabase.from('teachers').insert({
         email: newEmail,
         school_id: schoolId,
@@ -1211,21 +1465,22 @@ async function editTeacher(email, schoolId) {
         role: 'teacher',
         phone,
         class_assigned: classAssigned,
-        active: teacher.active
+        active: oldTeacher?.active !== false
       });
     } else {
       await supabase
         .from('teachers')
         .update(updateData)
-        .eq('email', email)
+        .eq('email', oldEmail)
         .eq('school_id', schoolId);
     }
     
     showToast('Teacher updated successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
-    console.error('Edit teacher error:', error);
+    console.error('Update teacher error:', error);
     showToast('Error updating teacher: ' + error.message, 'error');
   } finally {
     hideLoading();
@@ -1233,7 +1488,12 @@ async function editTeacher(email, schoolId) {
 }
 
 async function deleteTeacher(email, schoolId) {
-  if (!confirm(`Are you sure you want to delete teacher ${email}?`)) return;
+  if (!window.confirmDialog) {
+    if (!confirm(`Are you sure you want to delete teacher ${email}?`)) return;
+  } else {
+    const confirmed = await window.confirmDialog(`Are you sure you want to delete teacher ${email}?`, 'Confirm Delete');
+    if (!confirmed) return;
+  }
   
   try {
     showLoading('Deleting teacher...');
@@ -1276,22 +1536,69 @@ async function editStudent(studentId, schoolId) {
       return;
     }
     
-    const name = prompt('Enter student name:', student.name || '');
-    if (!name) return;
+    const formHTML = `
+      <form id="editStudentForm" onsubmit="handleEditStudentSubmit(event, '${studentId}', '${schoolId}')">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="editStudentName" class="form-input" value="${student.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Class *</label>
+            <input type="text" id="editStudentClass" class="form-input" value="${student.class || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Section *</label>
+            <input type="text" id="editStudentSection" class="form-input" value="${student.section || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Roll Number *</label>
+            <input type="number" id="editStudentRoll" class="form-input" value="${student.roll || ''}" required min="1">
+          </div>
+          <div class="form-group">
+            <label>Parent Name</label>
+            <input type="text" id="editStudentParentName" class="form-input" value="${student.parent_name || ''}">
+          </div>
+          <div class="form-group">
+            <label>Parent Mobile</label>
+            <input type="tel" id="editStudentParentMobile" class="form-input" value="${student.parent_mobile || ''}">
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+        </div>
+      </form>
+    `;
     
-    const className = prompt('Enter class:', student.class || '');
-    if (!className) return;
-    
-    const section = prompt('Enter section:', student.section || '');
-    if (!section) return;
-    
-    const roll = parseInt(prompt('Enter roll number:', student.roll || ''));
-    if (!roll) return;
-    
-    const parentName = prompt('Enter parent name (optional):', student.parent_name || '') || null;
-    const parentMobile = prompt('Enter parent mobile (optional):', student.parent_mobile || '') || null;
-    
+    showEditFormCard('student', 'Edit Student', formHTML);
+  } catch (error) {
+    console.error('Edit student error:', error);
+    showToast('Error loading student: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle edit student form submit
+ */
+async function handleEditStudentSubmit(e, studentId, schoolId) {
+  e.preventDefault();
+  
+  const name = document.getElementById('editStudentName').value.trim();
+  const className = document.getElementById('editStudentClass').value.trim();
+  const section = document.getElementById('editStudentSection').value.trim();
+  const roll = parseInt(document.getElementById('editStudentRoll').value) || 0;
+  const parentName = document.getElementById('editStudentParentName').value.trim() || null;
+  const parentMobile = document.getElementById('editStudentParentMobile').value.trim() || null;
+  
+  if (!name || !className || !section || !roll) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  try {
     showLoading('Updating student...');
+    const supabase = getSupabase();
     
     const { error: updateError } = await supabase
       .from('students')
@@ -1310,10 +1617,11 @@ async function editStudent(studentId, schoolId) {
     if (updateError) throw updateError;
     
     showToast('Student updated successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
-    console.error('Edit student error:', error);
+    console.error('Update student error:', error);
     showToast('Error updating student: ' + error.message, 'error');
   } finally {
     hideLoading();
@@ -1321,7 +1629,12 @@ async function editStudent(studentId, schoolId) {
 }
 
 async function deleteStudent(studentId, schoolId) {
-  if (!confirm(`Are you sure you want to delete this student?`)) return;
+  if (!window.confirmDialog) {
+    if (!confirm(`Are you sure you want to delete this student?`)) return;
+  } else {
+    const confirmed = await window.confirmDialog(`Are you sure you want to delete this student?`, 'Confirm Delete');
+    if (!confirmed) return;
+  }
   
   try {
     showLoading('Deleting student...');
