@@ -609,6 +609,9 @@ async function viewSchool(schoolId) {
           ` : '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No students found.</p>'}
         </div>
         
+        <!-- Edit Form Cards Container (hidden by default) -->
+        <div id="schoolDetailsEditForms" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-color);"></div>
+        
         <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
           <button class="btn btn-primary" onclick="closeSchoolDetailsModal()">Close</button>
         </div>
@@ -665,6 +668,42 @@ function closeSchoolDetailsModal() {
   const modal = document.getElementById('schoolDetailsModal');
   if (modal) modal.remove();
   window.currentSchoolData = null;
+}
+
+/**
+ * Show edit form card in school details modal
+ */
+function showEditFormCard(formType, title, formHTML, onSubmitHandler) {
+  const formsContainer = document.getElementById('schoolDetailsEditForms');
+  if (!formsContainer) return;
+  
+  formsContainer.innerHTML = `
+    <div class="card" style="background: #f9f9f9; margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>${title}</h3>
+        <button class="btn btn-secondary" onclick="closeEditFormCard()" style="padding: 0.25rem 0.75rem;">✕ Close</button>
+      </div>
+      ${formHTML}
+    </div>
+  `;
+  
+  formsContainer.style.display = 'block';
+  formsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Store onSubmit handler
+  window.currentEditFormHandler = onSubmitHandler;
+}
+
+/**
+ * Close edit form card
+ */
+function closeEditFormCard() {
+  const formsContainer = document.getElementById('schoolDetailsEditForms');
+  if (formsContainer) {
+    formsContainer.style.display = 'none';
+    formsContainer.innerHTML = '';
+  }
+  window.currentEditFormHandler = null;
 }
 
 /**
@@ -864,15 +903,55 @@ async function editSchoolAdmin(email, schoolId) {
       return;
     }
     
-    const name = prompt('Enter admin name:', admin.name || '');
-    if (!name) return;
+    const formHTML = `
+      <form id="editAdminForm" onsubmit="handleEditAdminSubmit(event, '${email}', '${schoolId}')">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="editAdminName" class="form-input" value="${admin.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="editAdminEmail" class="form-input" value="${admin.email || ''}" required>
+            <small style="color: #666;">Note: Changing email will recreate the admin record</small>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="editAdminPhone" class="form-input" value="${admin.phone || ''}">
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditFormCard()">Cancel</button>
+        </div>
+      </form>
+    `;
     
-    const newEmail = prompt('Enter admin email:', admin.email || '');
-    if (!newEmail) return;
-    
-    const phone = prompt('Enter admin phone (optional):', admin.phone || '') || null;
-    
+    showEditFormCard('admin', 'Edit School Admin', formHTML);
+  } catch (error) {
+    console.error('Edit admin error:', error);
+    showToast('Error loading admin: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle edit admin form submit
+ */
+async function handleEditAdminSubmit(e, oldEmail, schoolId) {
+  e.preventDefault();
+  
+  const name = document.getElementById('editAdminName').value.trim();
+  const newEmail = document.getElementById('editAdminEmail').value.trim();
+  const phone = document.getElementById('editAdminPhone').value.trim() || null;
+  
+  if (!name || !newEmail) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  try {
     showLoading('Updating admin...');
+    const supabase = getSupabase();
     
     const updateData = {
       name,
@@ -881,7 +960,7 @@ async function editSchoolAdmin(email, schoolId) {
     };
     
     // If email changed, need to handle it carefully (email is primary key)
-    if (newEmail !== email) {
+    if (newEmail !== oldEmail) {
       // Check if new email already exists
       const { data: existing } = await supabase
         .from('teachers')
@@ -895,30 +974,39 @@ async function editSchoolAdmin(email, schoolId) {
         return;
       }
       
+      // Get old admin data
+      const { data: oldAdmin } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('email', oldEmail)
+        .eq('school_id', schoolId)
+        .single();
+      
       // Delete old and insert new (since email is primary key)
-      await supabase.from('teachers').delete().eq('email', email).eq('school_id', schoolId);
+      await supabase.from('teachers').delete().eq('email', oldEmail).eq('school_id', schoolId);
       await supabase.from('teachers').insert({
         email: newEmail,
         school_id: schoolId,
         name,
         role: 'admin',
         phone,
-        class_assigned: admin.class_assigned || [],
-        active: admin.active
+        class_assigned: oldAdmin?.class_assigned || [],
+        active: oldAdmin?.active !== false
       });
     } else {
       await supabase
         .from('teachers')
         .update(updateData)
-        .eq('email', email)
+        .eq('email', oldEmail)
         .eq('school_id', schoolId);
     }
     
     showToast('Admin updated successfully!', 'success');
+    closeEditFormCard();
     closeSchoolDetailsModal();
     await viewSchool(schoolId);
   } catch (error) {
-    console.error('Edit admin error:', error);
+    console.error('Update admin error:', error);
     showToast('Error updating admin: ' + error.message, 'error');
   } finally {
     hideLoading();
@@ -926,7 +1014,12 @@ async function editSchoolAdmin(email, schoolId) {
 }
 
 async function deleteSchoolAdmin(email, schoolId) {
-  if (!confirm(`Are you sure you want to delete admin ${email}?`)) return;
+  if (!window.confirmDialog) {
+    if (!confirm(`Are you sure you want to delete admin ${email}?`)) return;
+  } else {
+    const confirmed = await window.confirmDialog(`Are you sure you want to delete admin ${email}?`, 'Confirm Delete');
+    if (!confirmed) return;
+  }
   
   try {
     showLoading('Deleting admin...');
